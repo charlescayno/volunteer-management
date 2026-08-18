@@ -4,6 +4,8 @@ A web-based application for volunteer management and tracking.
 
 ## Overview
 
+**Live Site:** [https://charlescayno.github.io/volunteer-management/](https://charlescayno.github.io/volunteer-management/)
+
 This repository contains the frontend code for a volunteer management system. It provides an interface for tracking roles, segments, and scanning QR codes, with real-time updates and live monitoring.
 
 ## Features
