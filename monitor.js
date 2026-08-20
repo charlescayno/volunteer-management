@@ -1,3 +1,34 @@
+
+// =============================
+// Auto-Logout Past Days
+// =============================
+async function enforceAutoLogout(allDatesObj) {
+  const today = getPHDate();
+  let updates = {};
+  
+  for (const [dateStr, dateLogs] of Object.entries(allDatesObj)) {
+    if (dateStr >= today) continue; // Skip today and future
+    
+    for (const [key, log] of Object.entries(dateLogs)) {
+      if (!log.timeOut && log.status !== 'pending') {
+        const fakeTimeOut = new Date(dateStr + 'T02:00:00').toISOString(); // 2:00 AM next day roughly
+        updates[`logs/${dateStr}/${key}/timeOut`] = fakeTimeOut;
+        updates[`logs/${dateStr}/${key}/status`] = null;
+        
+        if (log.commsId && log.commsId !== "NONE" && log.commsId !== "N/A") {
+           // Release comms
+           await db.ref(`comms/${log.commsId}`).update({ status: "available", assignedTo: null, assignedTime: null });
+        }
+      }
+    }
+  }
+  
+  if (Object.keys(updates).length > 0) {
+    await db.ref().update(updates);
+    console.log("Auto-logged out overdue logs from previous days.");
+  }
+}
+
 /*
  * STRICT PROTOCOL: Selective Delta Updates Only.
  */
@@ -759,7 +790,7 @@ function renderTable() {
       td(`<span class="font-mono text-green-400">${formatTime(log.timeIn)}</span>`)
     );
     row.appendChild(
-      td(`<span class="font-mono text-neutral-400">${calcDuration(log)}</span>`)
+      td(calcDurationMs(log) > 28800000 ? `<span class="font-mono text-red-400 font-bold animate-pulse flex items-center gap-1"><span class="material-icons-round text-[10px]">warning</span>${calcDuration(log)}</span>` : `<span class="font-mono text-neutral-400">${calcDuration(log)}</span>`)
     );
 
     // Force time-out button
@@ -1254,6 +1285,7 @@ function loadPreviousLogs() {
 
   db.ref("logs").once("value", (snapshot) => {
     const allDates = snapshot.val() || {};
+    enforceAutoLogout(allDates);
     allPreviousEntries = [];
     Object.entries(allDates).forEach(([date, dateLogs]) => {
       Object.entries(dateLogs).forEach(([key, log]) => {
@@ -1996,6 +2028,8 @@ async function showCommsHistory(commsId) {
       } else {
         const isClockedIn = !h.timeOut;
         const dotColor = isClockedIn ? "bg-green-400 animate-pulse" : "bg-neutral-600";
+        const durationMs = calcDurationMs(h);
+        const isOverdue = durationMs > 28800000; // 8 hours
         const duration = calcDuration(h);
         html += `
           <div class="flex items-center gap-3 bg-neutral-800 rounded-lg px-3 py-2.5">
@@ -2008,7 +2042,7 @@ async function showCommsHistory(commsId) {
               <p class="text-xs font-mono text-green-400">${formatTime(h.timeIn)}</p>
               <p class="text-xs font-mono ${h.timeOut ? "text-red-400" : "text-neutral-600"}">${h.timeOut ? formatTime(h.timeOut) : "active"}</p>
             </div>
-            <div class="text-xs text-neutral-500 font-mono flex-shrink-0">${duration}</div>
+            <div class="text-xs font-mono flex-shrink-0 flex items-center gap-1 ${isOverdue ? 'text-red-400 font-bold animate-pulse' : 'text-neutral-500'}">${isOverdue ? '<span class="material-icons-round text-[10px]">warning</span>' : ''}${duration}</div>
           </div>`;
       }
     });
@@ -2200,6 +2234,7 @@ db.ref(logsPath).on(
   (snapshot) => {
     allLogs = snapshot.val() || {};
     renderTable();
+    renderAnalytics();
   },
   (error) => {
     console.error("Firebase Read Error:", error);
@@ -2869,3 +2904,145 @@ document.getElementById("large-cal-today")?.addEventListener("click", () => {
 });
 
 // Call renderLargeCalendar when logs load
+
+
+// =============================
+// Analytics & EOD Summary
+// =============================
+let timeChartInst = null;
+let segChartInst = null;
+
+function renderAnalytics() {
+  const anSec = document.getElementById("analytics-section");
+  if (!anSec) return;
+  
+  const allLogsArr = Object.values(allLogs).filter(l => l.status !== "pending");
+  if (allLogsArr.length === 0) {
+    anSec.classList.add("hidden");
+    return;
+  }
+  
+  anSec.classList.remove("hidden");
+
+  // 1. Process Data
+  const hourCounts = {};
+  const segmentCounts = {};
+  let totalHours = 0;
+  let missingComms = [];
+  
+  const activeVolIds = new Set();
+  const completedVolIds = new Set();
+
+  allLogsArr.forEach(log => {
+    // Unique vols
+    if (log.volunteerId) {
+      if (!log.timeOut) activeVolIds.add(log.volunteerId);
+      else completedVolIds.add(log.volunteerId);
+    }
+    
+    // Segments
+    const seg = log.segment || "Unknown";
+    segmentCounts[seg] = (segmentCounts[seg] || 0) + 1;
+    
+    // Hours (Time In)
+    if (log.timeIn) {
+      const d = new Date(log.timeIn);
+      const hStr = d.getHours() + ":00";
+      hourCounts[hStr] = (hourCounts[hStr] || 0) + 1;
+    }
+    
+    // Total Hours
+    if (log.timeIn && log.timeOut) {
+      const ms = new Date(log.timeOut) - new Date(log.timeIn);
+      totalHours += ms / (1000 * 60 * 60);
+    } else if (log.timeIn) {
+      const ms = new Date() - new Date(log.timeIn);
+      totalHours += ms / (1000 * 60 * 60);
+    }
+    
+    // Missing comms
+    if (!log.timeOut && log.commsId && log.commsId !== "NONE" && log.commsId !== "N/A") {
+      missingComms.push(`${log.commsId} (${log.name || "Unknown"})`);
+    }
+  });
+
+  const totalUnique = new Set([...activeVolIds, ...completedVolIds]).size;
+
+  // 2. Render Charts
+  const ctxTime = document.getElementById('timeChart');
+  const ctxSeg = document.getElementById('segmentChart');
+
+  if (timeChartInst) timeChartInst.destroy();
+  if (segChartInst) segChartInst.destroy();
+
+  Chart.defaults.color = '#737373';
+
+  if (ctxTime) {
+    // Sort hours
+    const sortedHours = Object.keys(hourCounts).sort((a,b) => parseInt(a) - parseInt(b));
+    const hData = sortedHours.map(k => hourCounts[k]);
+    timeChartInst = new Chart(ctxTime, {
+      type: 'bar',
+      data: {
+        labels: sortedHours,
+        datasets: [{ label: 'Time-Ins', data: hData, backgroundColor: '#38bdf8', borderRadius: 4 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+    });
+  }
+
+  if (ctxSeg) {
+    const segLabels = Object.keys(segmentCounts);
+    const segData = Object.values(segmentCounts);
+    // tailwind neutral-700 to sky-400 palette
+    const colors = ['#38bdf8', '#818cf8', '#a78bfa', '#c084fc', '#e879f9', '#f472b6', '#fb7185', '#5eead4', '#94a3b8'];
+    segChartInst = new Chart(ctxSeg, {
+      type: 'doughnut',
+      data: {
+        labels: segLabels,
+        datasets: [{ data: segData, backgroundColor: colors, borderWidth: 1, borderColor: '#171717' }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+    });
+  }
+
+  // 3. EOD Summary
+  const summaryEl = document.getElementById("eod-summary");
+  if (summaryEl) {
+    const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    let txt = `📅 EOD Summary - ${dateStr}
+
+`;
+    txt += `👥 Total Unique Volunteers: ${totalUnique}
+`;
+    txt += `⏱️ Total Hours Served: ${totalHours.toFixed(1)} hrs
+`;
+    txt += `✅ Completed Shifts: ${allLogsArr.filter(l => l.timeOut).length}
+`;
+    txt += `🟡 Still Active: ${allLogsArr.filter(l => !l.timeOut).length}
+
+`;
+    
+    if (missingComms.length > 0) {
+      txt += `⚠️ UNRETURNED COMMS (${missingComms.length}):
+`;
+      missingComms.forEach(c => txt += ` - ${c}
+`);
+    } else {
+      txt += `📻 All Comms Returned! 🎉
+`;
+    }
+    
+    summaryEl.value = txt;
+  }
+}
+
+document.getElementById("copy-summary-btn")?.addEventListener("click", () => {
+  const summaryEl = document.getElementById("eod-summary");
+  if (summaryEl) {
+    summaryEl.select();
+    document.execCommand("copy");
+    showToast("Summary copied to clipboard", "content_copy", "text-sky-400");
+  }
+});
+
