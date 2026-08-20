@@ -3,6 +3,24 @@
  */
 
 // =============================
+// Theme Toggle Logic
+// =============================
+const themeToggleBtn = document.getElementById('theme-toggle-btn');
+const themeToggleIcon = document.getElementById('theme-toggle-icon');
+if (localStorage.getItem('vm-theme') === 'light') {
+    document.documentElement.classList.add('light-theme');
+    if (themeToggleIcon) themeToggleIcon.textContent = 'dark_mode';
+}
+if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', () => {
+        document.documentElement.classList.toggle('light-theme');
+        const isLight = document.documentElement.classList.contains('light-theme');
+        localStorage.setItem('vm-theme', isLight ? 'light' : 'dark');
+        themeToggleIcon.textContent = isLight ? 'dark_mode' : 'light_mode';
+    });
+}
+
+// =============================
 // Firebase config
 // =============================
 const firebaseConfig = {
