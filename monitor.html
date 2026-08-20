@@ -83,32 +83,6 @@
         </button>
       </div>
 
-      <!-- Comms Overview (Collapsible, multi-view) -->
-      <div class="mb-6">
-        <div class="flex items-center gap-2 mb-3">
-          <button id="comms-toggle" class="flex items-center gap-2 text-left group flex-1 min-w-0">
-            <h2 class="text-sm font-bold text-white uppercase tracking-widest">Comms Overview</h2>
-            <span id="comms-toggle-count" class="text-xs text-neutral-500 font-mono"></span>
-            <span class="material-icons-round text-neutral-500 text-sm group-hover:text-white transition" id="comms-toggle-icon">expand_less</span>
-          </button>
-          <!-- View toggles -->
-          <div class="flex items-center gap-1 flex-shrink-0">
-            <button id="comms-view-grid" title="Grid view" class="comms-view-btn w-7 h-7 rounded-md flex items-center justify-center transition">
-              <span class="material-icons-round text-sm">grid_view</span>
-            </button>
-            <button id="comms-view-compact" title="Compact view" class="comms-view-btn w-7 h-7 rounded-md flex items-center justify-center transition">
-              <span class="material-icons-round text-sm">apps</span>
-            </button>
-            <button id="comms-view-list" title="List view" class="comms-view-btn w-7 h-7 rounded-md flex items-center justify-center transition">
-              <span class="material-icons-round text-sm">table_rows</span>
-            </button>
-          </div>
-        </div>
-        <div id="comms-table-wrapper" class="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden transition-all duration-300">
-          <div id="comms-content"></div>
-        </div>
-      </div>
-
       <!-- Pending Table -->
       <div id="pending-section" class="mb-6 hidden">
         <div class="flex items-center gap-2 mb-3">
@@ -159,6 +133,32 @@
               <tbody id="pending-out-table-body" class="divide-y divide-neutral-800/50"></tbody>
             </table>
           </div>
+        </div>
+      </div>
+
+      <!-- Comms Overview (Collapsible, multi-view) -->
+      <div class="mb-6">
+        <div class="flex items-center gap-2 mb-3">
+          <button id="comms-toggle" class="flex items-center gap-2 text-left group flex-1 min-w-0">
+            <h2 class="text-sm font-bold text-white uppercase tracking-widest">Comms Overview</h2>
+            <span id="comms-toggle-count" class="text-xs text-neutral-500 font-mono"></span>
+            <span class="material-icons-round text-neutral-500 text-sm group-hover:text-white transition" id="comms-toggle-icon">expand_less</span>
+          </button>
+          <!-- View toggles -->
+          <div class="flex items-center gap-1 flex-shrink-0">
+            <button id="comms-view-grid" title="Grid view" class="comms-view-btn w-7 h-7 rounded-md flex items-center justify-center transition">
+              <span class="material-icons-round text-sm">grid_view</span>
+            </button>
+            <button id="comms-view-compact" title="Compact view" class="comms-view-btn w-7 h-7 rounded-md flex items-center justify-center transition">
+              <span class="material-icons-round text-sm">apps</span>
+            </button>
+            <button id="comms-view-list" title="List view" class="comms-view-btn w-7 h-7 rounded-md flex items-center justify-center transition">
+              <span class="material-icons-round text-sm">table_rows</span>
+            </button>
+          </div>
+        </div>
+        <div id="comms-table-wrapper" class="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden transition-all duration-300">
+          <div id="comms-content"></div>
         </div>
       </div>
 
