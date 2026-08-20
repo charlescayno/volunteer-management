@@ -3033,3 +3033,80 @@ document.getElementById("copy-summary-btn")?.addEventListener("click", () => {
   }
 });
 
+
+
+// =============================
+// Features: Force Time-Out All & Lazy Load History
+// =============================
+
+document.getElementById("force-timeout-all-btn")?.addEventListener("click", async () => {
+  const activeLogs = Object.entries(allLogs).filter(([k, l]) => !l.timeOut && l.status !== "pending" && l.status !== "pending-out");
+  if (activeLogs.length === 0) {
+    showToast("No active volunteers right now.", "info", "text-sky-400");
+    return;
+  }
+  
+  if (!confirm(`Are you sure you want to force time-out all ${activeLogs.length} active volunteers?`)) return;
+
+  const now = new Date().toISOString();
+  showToast(`Timing out ${activeLogs.length} volunteers...`, "hourglass_top", "text-amber-400");
+
+  for (const [key, log] of activeLogs) {
+    await db.ref(`logs/${todayDate}/${key}`).update({
+      timeOut: now,
+      status: null,
+      commsStatusOut: "OK"
+    });
+    if (log.commsId && log.commsId !== "NONE" && log.commsId !== "N/A") {
+      await releaseCommsOrAutoAssign(log.commsId);
+    }
+    syncToSheets({ action: "timeOut", logKey: key, timeOut: now, timeIn: log.timeIn });
+  }
+
+  showToast("All active volunteers timed out", "check_circle", "text-green-400");
+});
+
+document.getElementById("load-history-btn")?.addEventListener("click", () => {
+  const btn = document.getElementById("load-history-btn");
+  btn.innerHTML = `<span class="material-icons-round text-sm animate-spin">refresh</span> Loading...`;
+  btn.disabled = true;
+  
+  // Call loadPreviousLogs, but we need to intercept it to show the UI
+  // since loadPreviousLogs runs async but uses .once with a callback
+  db.ref("logs").once("value", (snapshot) => {
+    const allDates = snapshot.val() || {};
+    // enforceAutoLogout(allDates); // We'll handle this separately
+    allPreviousEntries = [];
+    Object.entries(allDates).forEach(([date, dateLogs]) => {
+      Object.entries(dateLogs).forEach(([key, log]) => {
+        if (log.status === "pending") return;
+        allPreviousEntries.push({ key, date, ...log });
+      });
+    });
+    prevLogsPage = 1;
+    renderPreviousLogsTable();
+    renderLargeCalendar();
+    
+    document.getElementById("history-overlay").classList.add("hidden");
+    document.getElementById("history-container").classList.remove("hidden");
+    showToast("History loaded successfully", "history", "text-sky-400");
+  });
+});
+
+// Run lightweight enforceAutoLogout for yesterday only
+function enforceYesterdayAutoLogout() {
+  const yesterday = new Date(Date.now() - 86400000);
+  // Adjust for PH timezone (UTC+8)
+  const tzOffset = 8 * 60 * 60 * 1000;
+  const localYesterday = new Date(yesterday.getTime() + tzOffset);
+  const yesterdayStr = localYesterday.toISOString().split('T')[0];
+  
+  db.ref(`logs/${yesterdayStr}`).once("value", (snap) => {
+    const data = snap.val();
+    if (data) {
+      enforceAutoLogout({ [yesterdayStr]: data });
+    }
+  });
+}
+// Run it shortly after page load
+setTimeout(enforceYesterdayAutoLogout, 2000);

@@ -407,6 +407,18 @@
 
       </div>
 
+<!-- History Overlay -->
+      <div id="history-overlay" class="mt-8 mb-6 bg-neutral-900 border border-neutral-800 rounded-xl p-8 text-center flex flex-col items-center justify-center">
+        <span class="material-icons-round text-sky-400 text-4xl mb-3">history</span>
+        <h2 class="text-lg font-bold text-white mb-2">Past Logs History</h2>
+        <p class="text-sm text-neutral-400 mb-6 max-w-md">To keep the live dashboard fast, the entire history database is not loaded by default. Load it now to use the Calendar and Search past logs.</p>
+        <button id="load-history-btn" class="bg-sky-500 hover:bg-sky-400 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition flex items-center gap-2">
+          <span class="material-icons-round text-sm">download</span> Load History
+        </button>
+      </div>
+      
+      <div id="history-container" class="hidden">
+
 <!-- Calendar View Section -->
       <div id="calendar-view-section" class="mt-8 mb-6">
         <div class="flex items-center gap-2 mb-3">
