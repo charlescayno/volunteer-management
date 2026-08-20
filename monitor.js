@@ -2234,7 +2234,6 @@ db.ref(logsPath).on(
   (snapshot) => {
     allLogs = snapshot.val() || {};
     renderTable();
-    renderAnalytics();
   },
   (error) => {
     console.error("Firebase Read Error:", error);
