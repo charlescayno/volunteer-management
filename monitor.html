@@ -409,9 +409,14 @@
         </div>
         <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
           <div class="flex items-center justify-between mb-4">
-            <button id="large-cal-prev" class="w-8 h-8 flex items-center justify-center rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white transition"><span class="material-icons-round text-sm">chevron_left</span></button>
             <h3 id="large-cal-month" class="text-base font-bold text-white">Month Year</h3>
-            <button id="large-cal-next" class="w-8 h-8 flex items-center justify-center rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white transition"><span class="material-icons-round text-sm">chevron_right</span></button>
+            <div class="flex items-center gap-1.5">
+              <button id="large-cal-today" class="text-xs font-semibold text-neutral-400 hover:text-white bg-neutral-800 hover:bg-neutral-700 rounded-lg px-3 py-1.5 transition">Today</button>
+              <div class="flex items-center gap-1">
+                <button id="large-cal-prev" class="w-8 h-8 flex items-center justify-center rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white transition"><span class="material-icons-round text-sm">chevron_left</span></button>
+                <button id="large-cal-next" class="w-8 h-8 flex items-center justify-center rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white transition"><span class="material-icons-round text-sm">chevron_right</span></button>
+              </div>
+            </div>
           </div>
           <div class="grid grid-cols-7 text-center mb-2">
             <span class="text-xs text-neutral-500 font-semibold py-1">Sun</span>

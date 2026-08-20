@@ -2809,7 +2809,8 @@ function renderLargeCalendar() {
     const count = logCounts[dateStr] || 0;
     const isToday = dateStr === todayStr;
 
-    let html = `<span class="text-xs font-semibold ${isToday ? 'text-sky-400' : 'text-neutral-400 group-hover:text-white'}">${d}</span>`;
+    let html = `<span class="flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold ${isToday ? 'bg-sky-500 text-white' : 'text-neutral-400 group-hover:text-white'}">${d}</span>`;
+
     
     if (count > 0) {
       html += `<div class="mt-auto w-full">
@@ -2858,6 +2859,12 @@ document.getElementById("large-cal-prev")?.addEventListener("click", () => {
 document.getElementById("large-cal-next")?.addEventListener("click", () => {
   largeCalMonth++;
   if (largeCalMonth > 11) { largeCalMonth = 0; largeCalYear++; }
+  renderLargeCalendar();
+});
+
+document.getElementById("large-cal-today")?.addEventListener("click", () => {
+  largeCalMonth = new Date().getMonth();
+  largeCalYear = new Date().getFullYear();
   renderLargeCalendar();
 });
 
