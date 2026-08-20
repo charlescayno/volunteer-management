@@ -401,6 +401,31 @@
         </div>
       </div>
 
+      <!-- Calendar View Section -->
+      <div id="calendar-view-section" class="mt-8 mb-6">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="material-icons-round text-sky-400 text-sm">event_note</span>
+          <h2 class="text-sm font-bold text-white uppercase tracking-widest">Calendar View</h2>
+        </div>
+        <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+          <div class="flex items-center justify-between mb-4">
+            <button id="large-cal-prev" class="w-8 h-8 flex items-center justify-center rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white transition"><span class="material-icons-round text-sm">chevron_left</span></button>
+            <h3 id="large-cal-month" class="text-base font-bold text-white">Month Year</h3>
+            <button id="large-cal-next" class="w-8 h-8 flex items-center justify-center rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white transition"><span class="material-icons-round text-sm">chevron_right</span></button>
+          </div>
+          <div class="grid grid-cols-7 text-center mb-2">
+            <span class="text-xs text-neutral-500 font-semibold py-1">Sun</span>
+            <span class="text-xs text-neutral-500 font-semibold py-1">Mon</span>
+            <span class="text-xs text-neutral-500 font-semibold py-1">Tue</span>
+            <span class="text-xs text-neutral-500 font-semibold py-1">Wed</span>
+            <span class="text-xs text-neutral-500 font-semibold py-1">Thu</span>
+            <span class="text-xs text-neutral-500 font-semibold py-1">Fri</span>
+            <span class="text-xs text-neutral-500 font-semibold py-1">Sat</span>
+          </div>
+          <div id="large-cal-grid" class="grid grid-cols-7 gap-1"></div>
+        </div>
+      </div>
+
       <div id="no-logs-message" class="text-center py-12 text-neutral-600 hidden">
         <span class="material-icons-round text-4xl text-neutral-700 mb-2 block">inbox</span>
         <p class="text-sm">No volunteer activity recorded for today.</p>
