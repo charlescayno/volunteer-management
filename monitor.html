@@ -214,13 +214,18 @@
 
       <!-- Active Table -->
       <div class="mb-6">
-        <div class="flex items-center gap-2 mb-2">
-          <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-          <button id="active-section-toggle" class="flex items-center gap-2 text-left group flex-1 min-w-0">
-            <h2 class="text-sm font-bold text-white uppercase tracking-widest">Active</h2>
-            <span id="active-table-count" class="text-xs text-neutral-500 font-mono"></span>
-            <span class="material-icons-round text-neutral-500 text-sm group-hover:text-white transition" id="active-toggle-icon">expand_less</span>
-          </button>
+        <div class="flex items-center justify-between gap-2 mb-2">
+            <div class="flex items-center gap-2 flex-1 min-w-0">
+              <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+              <button id="active-section-toggle" class="flex items-center gap-2 text-left group flex-1 min-w-0">
+                <h2 class="text-sm font-bold text-white uppercase tracking-widest">Active</h2>
+                <span id="active-table-count" class="text-xs text-neutral-500 font-mono"></span>
+                <span class="material-icons-round text-neutral-500 text-sm group-hover:text-white transition" id="active-toggle-icon">expand_less</span>
+              </button>
+            </div>
+            <button id="force-timeout-all-btn" class="text-xs bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white transition rounded px-3 py-1 font-bold border border-red-600/30 flex items-center gap-1">
+              <span class="material-icons-round text-[14px]">logout</span> Time Out All
+            </button>
         </div>
         <div id="active-section-body">
         <!-- Segment overview -->
@@ -406,6 +411,18 @@
 
 
       </div>
+
+<!-- History Overlay -->
+      <div id="history-overlay" class="mt-8 mb-6 bg-neutral-900 border border-neutral-800 rounded-xl p-8 text-center flex flex-col items-center justify-center">
+        <span class="material-icons-round text-sky-400 text-4xl mb-3">history</span>
+        <h2 class="text-lg font-bold text-white mb-2">Past Logs History</h2>
+        <p class="text-sm text-neutral-400 mb-6 max-w-md">To keep the live dashboard fast, the entire history database is not loaded by default. Load it now to use the Calendar and Search past logs.</p>
+        <button id="load-history-btn" class="bg-sky-500 hover:bg-sky-400 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition flex items-center gap-2">
+          <span class="material-icons-round text-sm">download</span> Load History
+        </button>
+      </div>
+      
+      <div id="history-container" class="hidden">
 
 <!-- History Overlay -->
       <div id="history-overlay" class="mt-8 mb-6 bg-neutral-900 border border-neutral-800 rounded-xl p-8 text-center flex flex-col items-center justify-center">
