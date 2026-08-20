@@ -2664,43 +2664,6 @@ function downloadQr(id, name, team) {
   }, 300);
 }
 
-// =============================
-// Manual Sync to Google Sheets
-// =============================
-document.getElementById("sync-sheets-btn").addEventListener("click", async () => {
-  const btn = document.getElementById("sync-sheets-btn");
-  const label = document.getElementById("sync-sheets-label");
-  const icon = btn.querySelector(".material-icons-round");
-
-  // Disable button and show syncing state
-  btn.disabled = true;
-  btn.classList.add("opacity-50", "pointer-events-none");
-  label.textContent = "Syncing...";
-  icon.textContent = "hourglass_top";
-  icon.classList.add("animate-spin");
-
-  try {
-    // Read ALL logs from Firebase (all dates)
-    const logsSnap = await db.ref("logs").once("value");
-    const allDates = logsSnap.val() || {};
-    const allLogEntries = [];
-
-    Object.entries(allDates).forEach(([date, dateLogs]) => {
-      Object.entries(dateLogs).forEach(([key, log]) => {
-        // Skip pending entries that haven't been confirmed
-        if (log.status === "pending") return;
-        allLogEntries.push({
-          key,
-          date,
-          volunteerId: log.volunteerId || "",
-          name: log.name || "",
-          segment: log.segment || "",
-          role: log.role || "",
-          commsId: log.commsId || "",
-          numberedId: log.numberedId || "",
-          timeIn: log.timeIn || "",
-          timeOut: log.timeOut || "",
-        });
       });
     });
 
@@ -2809,8 +2772,7 @@ function renderLargeCalendar() {
     const count = logCounts[dateStr] || 0;
     const isToday = dateStr === todayStr;
 
-    let html = `<span class="flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold ${isToday ? 'bg-sky-500 text-white' : 'text-neutral-400 group-hover:text-white'}">${d}</span>`;
-
+    let html = `<span class="text-xs font-semibold ${isToday ? 'text-sky-400' : 'text-neutral-400 group-hover:text-white'}">${d}</span>`;
     
     if (count > 0) {
       html += `<div class="mt-auto w-full">
@@ -2859,12 +2821,6 @@ document.getElementById("large-cal-prev")?.addEventListener("click", () => {
 document.getElementById("large-cal-next")?.addEventListener("click", () => {
   largeCalMonth++;
   if (largeCalMonth > 11) { largeCalMonth = 0; largeCalYear++; }
-  renderLargeCalendar();
-});
-
-document.getElementById("large-cal-today")?.addEventListener("click", () => {
-  largeCalMonth = new Date().getMonth();
-  largeCalYear = new Date().getFullYear();
   renderLargeCalendar();
 });
 
