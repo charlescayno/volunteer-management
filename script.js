@@ -2172,3 +2172,101 @@ if (document.getElementById("search-user-input")) {
     });
   });
 }
+
+
+// =============================
+// PWA & Offline Sync Logic
+// =============================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('Service Worker registered', reg))
+      .catch(err => console.log('Service Worker registration failed', err));
+  });
+}
+
+function updateOnlineStatus() {
+  const banner = document.getElementById('offline-banner');
+  if (banner) {
+    if (navigator.onLine) {
+      banner.classList.add('hidden');
+      flushOfflineScans();
+    } else {
+      banner.classList.remove('hidden');
+    }
+  }
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
+
+// Simple IndexedDB wrapper for offline scans
+const DB_NAME = 'vm-offline-db';
+const STORE_NAME = 'scans';
+
+function getOfflineDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE_NAME, { autoIncrement: true });
+    request.onsuccess = (e) => resolve(e.target.result);
+    request.onerror = (e) => reject(e);
+  });
+}
+
+async function saveScanOffline(scanData) {
+  const db = await getOfflineDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).add(scanData);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject();
+  });
+}
+
+async function flushOfflineScans() {
+  const db_instance = await getOfflineDB();
+  const tx = db_instance.transaction(STORE_NAME, 'readonly');
+  const store = tx.objectStore(STORE_NAME);
+  const req = store.getAll();
+  
+  req.onsuccess = async () => {
+    const scans = req.result;
+    if (scans && scans.length > 0) {
+      showToast(`Syncing ${scans.length} offline scan(s)...`, "sync", "text-sky-400");
+      let syncedCount = 0;
+      for (const scan of scans) {
+         try {
+           // Push raw offline scan to a special queue in Firebase for admins to process, 
+           // or process it directly if we have enough data.
+           await db.ref('offlineQueue').push(scan);
+           syncedCount++;
+         } catch(e) {
+           console.error("Failed to sync offline scan", e);
+         }
+      }
+      
+      if (syncedCount > 0) {
+        // Clear store
+        const clearTx = db_instance.transaction(STORE_NAME, 'readwrite');
+        clearTx.objectStore(STORE_NAME).clear();
+        showToast("Offline scans synced successfully!", "cloud_done", "text-green-400");
+      }
+    }
+  };
+}
+
+// Hook into handleVolunteerScan for offline fallback
+const originalHandleScan = handleVolunteerScan;
+handleVolunteerScan = async function(id) {
+  if (!navigator.onLine) {
+    if (typeof playTone === "function") playTone("success");
+    await saveScanOffline({ id, timestamp: Date.now(), type: 'raw_scan' });
+    showStage('qr-result');
+    document.getElementById('result-message').innerHTML = `<span class="text-amber-400 font-bold">OFFLINE MODE</span><br>Scan saved locally. It will sync automatically when internet is restored.`;
+    document.getElementById('result-icon').textContent = "cloud_off";
+    document.getElementById('result-icon').className = "material-icons-round text-amber-400 text-6xl mb-4";
+    setTimeout(startQrScanner, 4000);
+    return;
+  }
+  return originalHandleScan(id);
+};

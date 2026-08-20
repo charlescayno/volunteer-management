@@ -1,0 +1,16 @@
+{
+  "name": "Volunteer Management",
+  "short_name": "Volunteers",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#171717",
+  "theme_color": "#171717",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

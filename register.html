@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Live Production — Register</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#171717">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -71,6 +73,7 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   </head>
   <body class="bg-neutral-950 min-h-screen flex items-center justify-center p-4" style="font-family:'Inter',sans-serif;">
+    <div id="offline-banner" class="hidden bg-red-600 text-white text-center text-xs py-1.5 font-bold tracking-widest uppercase sticky top-0 z-50 shadow-md">You are currently offline. Scans will be saved locally and synced later.</div>
     <div id="main-card" class="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 md:p-8 overflow-hidden">
       <!-- Header (clickable → back to scan) -->
       <a href="index.html" class="block text-center no-underline">
