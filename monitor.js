@@ -2977,19 +2977,7 @@ function renderAnalytics() {
 
   Chart.defaults.color = '#737373';
 
-  if (ctxTime) {
-    // Sort hours
-    const sortedHours = Object.keys(hourCounts).sort((a,b) => parseInt(a) - parseInt(b));
-    const hData = sortedHours.map(k => hourCounts[k]);
-    timeChartInst = new Chart(ctxTime, {
-      type: 'bar',
-      data: {
-        labels: sortedHours,
-        datasets: [{ label: 'Time-Ins', data: hData, backgroundColor: '#38bdf8', borderRadius: 4 }]
-      },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
-    });
-  }
+
 
   if (ctxSeg) {
     const segLabels = Object.keys(segmentCounts);
