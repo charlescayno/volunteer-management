@@ -1296,8 +1296,8 @@ function loadPreviousLogs() {
     prevLogsPage = 1;
     renderPrevLogsPills();
     renderCalendar();
-    renderLargeCalendar();
-        renderLargeCalendar();
+
+
     filterAndRenderPreviousLogs();
   });
 }
@@ -1609,7 +1609,7 @@ function renderCalendar() {
         else calBtn.classList.remove("border-white/30", "text-white");
         prevLogsPage = 1;
         renderCalendar();
-        renderLargeCalendar();
+
         filterAndRenderPreviousLogs();
       });
     }
@@ -1630,7 +1630,7 @@ document.getElementById("prev-logs-calendar-btn")?.addEventListener("click", (e)
   const cal = document.getElementById("prev-logs-calendar");
   cal.classList.toggle("hidden");
   if (!cal.classList.contains("hidden")) renderCalendar();
-        renderLargeCalendar();
+
 });
 
 document.addEventListener("click", (e) => {
@@ -1644,13 +1644,13 @@ document.getElementById("cal-prev-month")?.addEventListener("click", () => {
   calendarMonth--;
   if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; }
   renderCalendar();
-        renderLargeCalendar();
+
 });
 document.getElementById("cal-next-month")?.addEventListener("click", () => {
   calendarMonth++;
   if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; }
   renderCalendar();
-        renderLargeCalendar();
+
 });
 document.getElementById("cal-clear")?.addEventListener("click", () => {
   prevLogsDateFilter = null;
@@ -1659,7 +1659,7 @@ document.getElementById("cal-clear")?.addEventListener("click", () => {
   document.getElementById("prev-logs-calendar").classList.add("hidden");
   prevLogsPage = 1;
   renderCalendar();
-        renderLargeCalendar();
+
   filterAndRenderPreviousLogs();
 });
 
@@ -2308,7 +2308,7 @@ function renderVolunteers() {
   });
 
   // Update sort arrows
-  ["name", "nickname", "type"].forEach((k) => {
+  ["name", "nickname", "type", "remarks"].forEach((k) => {
     const el = document.getElementById(`vol-arrow-${k}`);
     if (!el) return;
     if (volSortKey === k) {
@@ -2804,9 +2804,6 @@ db.ref("volunteers").on("value", (snapshot) => {
 // =============================
 // Large Calendar View
 // =============================
-let largeCalYear = new Date().getFullYear();
-let largeCalMonth = new Date().getMonth();
-
 function renderLargeCalendar() {
   const grid = document.getElementById("large-cal-grid");
   const label = document.getElementById("large-cal-month");
@@ -2885,23 +2882,11 @@ function renderLargeCalendar() {
   }
 }
 
-document.getElementById("large-cal-prev")?.addEventListener("click", () => {
-  largeCalMonth--;
-  if (largeCalMonth < 0) { largeCalMonth = 11; largeCalYear--; }
-  renderLargeCalendar();
-});
 
-document.getElementById("large-cal-next")?.addEventListener("click", () => {
-  largeCalMonth++;
-  if (largeCalMonth > 11) { largeCalMonth = 0; largeCalYear++; }
-  renderLargeCalendar();
-});
 
-document.getElementById("large-cal-today")?.addEventListener("click", () => {
-  largeCalMonth = new Date().getMonth();
-  largeCalYear = new Date().getFullYear();
-  renderLargeCalendar();
-});
+
+
+
 
 // Call renderLargeCalendar when logs load
 
@@ -3086,8 +3071,7 @@ document.getElementById("load-history-btn")?.addEventListener("click", () => {
     });
     prevLogsPage = 1;
     renderPreviousLogsTable();
-    renderLargeCalendar();
-    
+
     document.getElementById("history-overlay").classList.add("hidden");
     document.getElementById("history-container").classList.remove("hidden");
     showToast("History loaded successfully", "history", "text-sky-400");
