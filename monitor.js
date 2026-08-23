@@ -2282,7 +2282,7 @@ function renderVolunteers() {
   // Text search (include nickname)
   if (query) {
     filtered = filtered.filter((v) =>
-      `${v.name} ${v.nickname} ${v.team} ${v.contact} ${v.type} ${v.id}`.toLowerCase().includes(query)
+      `${v.name} ${v.nickname} ${v.remarks} ${v.team} ${v.contact} ${v.type} ${v.id}`.toLowerCase().includes(query)
     );
   }
 
@@ -2304,6 +2304,7 @@ function renderVolunteers() {
     const dir = volSortDir === "asc" ? 1 : -1;
     if (volSortKey === "nickname") return dir * (a.nickname || "").localeCompare(b.nickname || "");
     if (volSortKey === "type") return dir * (a.type || "").localeCompare(b.type || "");
+    if (volSortKey === "remarks") return dir * (a.remarks || "").localeCompare(b.remarks || "");
     return dir * (a.name || "").localeCompare(b.name || "");
   });
 
@@ -2345,6 +2346,11 @@ function renderVolunteers() {
       ? '<span class="text-xs bg-neutral-700 text-neutral-300 px-2 py-0.5 rounded-full">Guest</span>'
       : '<span class="text-xs bg-neutral-800 text-white px-2 py-0.5 rounded-full">Volunteer</span>';
     row.appendChild(vtd(typeBadge));
+
+    const remarksBadge = v.remarks
+      ? `<span class="text-xs text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md font-medium border border-amber-500/20">${v.remarks}</span>`
+      : '<span class="text-neutral-600">—</span>';
+    row.appendChild(vtd(remarksBadge));
 
     const segments = v.team
       ? v.team.split(",").map((s) => `<span class="inline-block text-xs bg-neutral-800 text-neutral-300 px-2 py-0.5 rounded-full mr-1 mb-1">${s.trim()}</span>`).join("")
@@ -2409,7 +2415,7 @@ function renderVolunteers() {
 volSearchInput.addEventListener("input", renderVolunteers);
 
 // Volunteer table sort headers
-["name", "nickname", "type"].forEach((key) => {
+["name", "nickname", "type", "remarks"].forEach((key) => {
   document.getElementById(`vol-th-${key}`)?.addEventListener("click", () => {
     if (volSortKey === key) {
       volSortDir = volSortDir === "asc" ? "desc" : "asc";
@@ -2501,6 +2507,8 @@ function openEditModal(vol) {
   document.getElementById("edit-vol-id").value = vol.id;
   document.getElementById("edit-vol-name").value = vol.name;
   document.getElementById("edit-vol-nickname").value = vol.nickname || "";
+  const remarksInput = document.getElementById("edit-vol-remarks");
+  if (remarksInput) remarksInput.value = vol.remarks || "";
   document.getElementById("edit-vol-contact").value = vol.contact || "";
 
   // Type toggle
@@ -2567,6 +2575,7 @@ document.getElementById("edit-vol-save").addEventListener("click", async () => {
   const name = document.getElementById("edit-vol-name").value.trim();
   const nickname = document.getElementById("edit-vol-nickname").value.trim();
   const contact = document.getElementById("edit-vol-contact").value.trim();
+  const remarks = (document.getElementById("edit-vol-remarks")?.value || "").trim();
   if (!name) return;
 
   const team = [...editSelectedSegments].join(", ");
@@ -2574,6 +2583,7 @@ document.getElementById("edit-vol-save").addEventListener("click", async () => {
     name,
     nickname: nickname || null,
     type: editSelectedType,
+    remarks: remarks || null,
     team: team || null,
     contact: contact || null,
   });
@@ -2788,7 +2798,7 @@ document.getElementById("sync-sheets-btn").addEventListener("click", async () =>
 db.ref("volunteers").on("value", (snapshot) => {
   const data = snapshot.val() || {};
   allVolunteers = Object.entries(data).map(([id, v]) => ({
-    id, name: v.name || "—", nickname: v.nickname || "", type: v.type || "volunteer", team: v.team || "", contact: v.contact || "", registeredAt: v.registeredAt || "",
+    id, name: v.name || "—", nickname: v.nickname || "", type: v.type || "volunteer", remarks: v.remarks || "", team: v.team || "", contact: v.contact || "", registeredAt: v.registeredAt || "",
   }));
   allVolunteers.sort((a, b) => a.name.localeCompare(b.name));
   // Rebuild nickname map: volunteerId -> nickname if set, else first name
@@ -2799,227 +2809,6 @@ db.ref("volunteers").on("value", (snapshot) => {
   registeredCountEl.textContent = allVolunteers.length;
   renderVolunteers();
 });
-
-
-// =============================
-// Large Calendar View
-// =============================
-function renderLargeCalendar() {
-  const grid = document.getElementById("large-cal-grid");
-  const label = document.getElementById("large-cal-month");
-  if (!grid || !label) return;
-
-  label.textContent = new Date(largeCalYear, largeCalMonth, 1).toLocaleDateString([], { month: "long", year: "numeric" });
-
-  const firstDay = new Date(largeCalYear, largeCalMonth, 1).getDay();
-  const daysInMonth = new Date(largeCalYear, largeCalMonth + 1, 0).getDate();
-
-  // Group entries by date
-  const logCounts = {};
-  allPreviousEntries.forEach(e => {
-    logCounts[e.date] = (logCounts[e.date] || 0) + 1;
-  });
-
-  grid.innerHTML = "";
-  for (let i = 0; i < firstDay; i++) {
-    const emptyDiv = document.createElement("div");
-    emptyDiv.className = "p-2 min-h-[80px] rounded-lg bg-neutral-900/50 border border-neutral-800/50 opacity-50";
-    grid.appendChild(emptyDiv);
-  }
-
-  const todayStr = new Date().toLocaleDateString("en-CA").split("T")[0]; // YYYY-MM-DD local
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dayBtn = document.createElement("button");
-    dayBtn.className = "relative p-2 min-h-[80px] flex flex-col items-start justify-start rounded-lg border border-neutral-800 bg-neutral-900 hover:border-neutral-600 transition text-left group overflow-hidden";
-    
-    // Format YYYY-MM-DD
-    const m = String(largeCalMonth + 1).padStart(2, "0");
-    const day = String(d).padStart(2, "0");
-    const dateStr = `${largeCalYear}-${m}-${day}`;
-    
-    const count = logCounts[dateStr] || 0;
-    const isToday = dateStr === todayStr;
-
-    let html = `<span class="flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold ${isToday ? 'bg-sky-500 text-white' : 'text-neutral-400 group-hover:text-white'}">${d}</span>`;
-
-    
-    if (count > 0) {
-      html += `<div class="mt-auto w-full">
-        <div class="bg-sky-500/10 border border-sky-500/20 text-sky-400 text-[10px] font-bold px-1.5 py-1 rounded w-full text-center truncate">
-          ${count} Log${count !== 1 ? 's' : ''}
-        </div>
-      </div>`;
-    }
-
-    dayBtn.innerHTML = html;
-
-    if (count > 0 || isToday) {
-      dayBtn.addEventListener("click", () => {
-        // Jump to previous logs and filter
-        prevLogsDateFilter = dateStr;
-        const calLabel = document.getElementById("prev-logs-calendar-label");
-        calLabel.textContent = new Date(dateStr + "T00:00:00").toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
-        document.getElementById("prev-logs-calendar-btn").classList.add("border-white/30", "text-white");
-        
-        // Show previous logs section if hidden
-        const prevLogsSec = document.getElementById("previous-logs-section");
-        if (prevLogsSec.classList.contains("hidden")) {
-           prevLogsSec.classList.remove("hidden");
-        }
-        
-        prevLogsPage = 1;
-        filterAndRenderPreviousLogs();
-        
-        // Scroll to it
-        document.getElementById("previous-logs-section").scrollIntoView({ behavior: 'smooth' });
-      });
-    } else {
-      dayBtn.classList.add("cursor-default", "hover:border-neutral-800");
-    }
-
-    grid.appendChild(dayBtn);
-  }
-}
-
-
-
-
-
-
-
-// Call renderLargeCalendar when logs load
-
-
-// =============================
-// Analytics & EOD Summary
-// =============================
-let timeChartInst = null;
-let segChartInst = null;
-
-function renderAnalytics() {
-  const anSec = document.getElementById("analytics-section");
-  if (!anSec) return;
-  
-  const allLogsArr = Object.values(allLogs).filter(l => l.status !== "pending");
-  if (allLogsArr.length === 0) {
-    anSec.classList.add("hidden");
-    return;
-  }
-  
-  anSec.classList.remove("hidden");
-
-  // 1. Process Data
-  const hourCounts = {};
-  const segmentCounts = {};
-  let totalHours = 0;
-  let missingComms = [];
-  
-  const activeVolIds = new Set();
-  const completedVolIds = new Set();
-
-  allLogsArr.forEach(log => {
-    // Unique vols
-    if (log.volunteerId) {
-      if (!log.timeOut) activeVolIds.add(log.volunteerId);
-      else completedVolIds.add(log.volunteerId);
-    }
-    
-    // Segments
-    const seg = log.segment || "Unknown";
-    segmentCounts[seg] = (segmentCounts[seg] || 0) + 1;
-    
-    // Hours (Time In)
-    if (log.timeIn) {
-      const d = new Date(log.timeIn);
-      const hStr = d.getHours() + ":00";
-      hourCounts[hStr] = (hourCounts[hStr] || 0) + 1;
-    }
-    
-    // Total Hours
-    if (log.timeIn && log.timeOut) {
-      const ms = new Date(log.timeOut) - new Date(log.timeIn);
-      totalHours += ms / (1000 * 60 * 60);
-    } else if (log.timeIn) {
-      const ms = new Date() - new Date(log.timeIn);
-      totalHours += ms / (1000 * 60 * 60);
-    }
-    
-    // Missing comms
-    if (!log.timeOut && log.commsId && log.commsId !== "NONE" && log.commsId !== "N/A") {
-      missingComms.push(`${log.commsId} (${log.name || "Unknown"})`);
-    }
-  });
-
-  const totalUnique = new Set([...activeVolIds, ...completedVolIds]).size;
-
-  // 2. Render Charts
-  const ctxTime = document.getElementById('timeChart');
-  const ctxSeg = document.getElementById('segmentChart');
-
-  if (timeChartInst) timeChartInst.destroy();
-  if (segChartInst) segChartInst.destroy();
-
-  Chart.defaults.color = '#737373';
-
-
-
-  if (ctxSeg) {
-    const segLabels = Object.keys(segmentCounts);
-    const segData = Object.values(segmentCounts);
-    // tailwind neutral-700 to sky-400 palette
-    const colors = ['#38bdf8', '#818cf8', '#a78bfa', '#c084fc', '#e879f9', '#f472b6', '#fb7185', '#5eead4', '#94a3b8'];
-    segChartInst = new Chart(ctxSeg, {
-      type: 'doughnut',
-      data: {
-        labels: segLabels,
-        datasets: [{ data: segData, backgroundColor: colors, borderWidth: 1, borderColor: '#171717' }]
-      },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
-    });
-  }
-
-  // 3. EOD Summary
-  const summaryEl = document.getElementById("eod-summary");
-  if (summaryEl) {
-    const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    let txt = `📅 EOD Summary - ${dateStr}
-
-`;
-    txt += `👥 Total Unique Volunteers: ${totalUnique}
-`;
-    txt += `⏱️ Total Hours Served: ${totalHours.toFixed(1)} hrs
-`;
-    txt += `✅ Completed Shifts: ${allLogsArr.filter(l => l.timeOut).length}
-`;
-    txt += `🟡 Still Active: ${allLogsArr.filter(l => !l.timeOut).length}
-
-`;
-    
-    if (missingComms.length > 0) {
-      txt += `⚠️ UNRETURNED COMMS (${missingComms.length}):
-`;
-      missingComms.forEach(c => txt += ` - ${c}
-`);
-    } else {
-      txt += `📻 All Comms Returned! 🎉
-`;
-    }
-    
-    summaryEl.value = txt;
-  }
-}
-
-document.getElementById("copy-summary-btn")?.addEventListener("click", () => {
-  const summaryEl = document.getElementById("eod-summary");
-  if (summaryEl) {
-    summaryEl.select();
-    document.execCommand("copy");
-    showToast("Summary copied to clipboard", "content_copy", "text-sky-400");
-  }
-});
-
-
 
 // =============================
 // Features: Force Time-Out All & Lazy Load History
@@ -3052,31 +2841,7 @@ document.getElementById("force-timeout-all-btn")?.addEventListener("click", asyn
   showToast("All active volunteers timed out", "check_circle", "text-green-400");
 });
 
-document.getElementById("load-history-btn")?.addEventListener("click", () => {
-  const btn = document.getElementById("load-history-btn");
-  btn.innerHTML = `<span class="material-icons-round text-sm animate-spin">refresh</span> Loading...`;
-  btn.disabled = true;
-  
-  // Call loadPreviousLogs, but we need to intercept it to show the UI
-  // since loadPreviousLogs runs async but uses .once with a callback
-  db.ref("logs").once("value", (snapshot) => {
-    const allDates = snapshot.val() || {};
-    // enforceAutoLogout(allDates); // We'll handle this separately
-    allPreviousEntries = [];
-    Object.entries(allDates).forEach(([date, dateLogs]) => {
-      Object.entries(dateLogs).forEach(([key, log]) => {
-        if (log.status === "pending") return;
-        allPreviousEntries.push({ key, date, ...log });
-      });
-    });
-    prevLogsPage = 1;
-    renderPreviousLogsTable();
 
-    document.getElementById("history-overlay").classList.add("hidden");
-    document.getElementById("history-container").classList.remove("hidden");
-    showToast("History loaded successfully", "history", "text-sky-400");
-  });
-});
 
 // Run lightweight enforceAutoLogout for yesterday only
 function enforceYesterdayAutoLogout() {
