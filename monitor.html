@@ -460,7 +460,8 @@
                 <th id="vol-th-name" class="px-4 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider cursor-pointer hover:text-white transition select-none">Name <span id="vol-arrow-name" class="font-mono text-[10px]">↑</span></th>
                 <th id="vol-th-nickname" class="px-4 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider cursor-pointer hover:text-white transition select-none">Nickname <span id="vol-arrow-nickname" class="font-mono text-[10px]"></span></th>
                 <th id="vol-th-type" class="px-4 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider cursor-pointer hover:text-white transition select-none">Type <span id="vol-arrow-type" class="font-mono text-[10px]"></span></th>
-                <th id="vol-th-remarks" class="px-4 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider cursor-pointer hover:text-white transition select-none">Remarks / Status <span id="vol-arrow-remarks" class="font-mono text-[10px]"></span></th>
+                <th id="vol-th-status" class="px-4 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider cursor-pointer hover:text-white transition select-none">Status <span id="vol-arrow-status" class="font-mono text-[10px]"></span></th>
+                <th id="vol-th-remarks" class="px-4 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider cursor-pointer hover:text-white transition select-none">Remarks <span id="vol-arrow-remarks" class="font-mono text-[10px]"></span></th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Segments</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Contact</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">QR</th>
@@ -524,8 +525,20 @@
             <input type="text" id="edit-vol-nickname" placeholder="Optional" class="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-sm focus:outline-none focus:border-neutral-500" />
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 uppercase tracking-widest font-semibold mb-1">Remarks / Status</label>
-            <input type="text" id="edit-vol-remarks" placeholder="Optional (e.g. Not yet endorsed, Trainee)" class="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-sm focus:outline-none focus:border-neutral-500" />
+            <label class="block text-xs text-neutral-500 uppercase tracking-widest font-semibold mb-1">Status</label>
+            <select id="edit-vol-status" class="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-sm focus:outline-none focus:border-neutral-500">
+              <option value="Active">Active</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Pending">Pending</option>
+              <option value="Complete">Complete</option>
+              <option value="Inactive">Inactive</option>
+              <option value="Trainee">Trainee</option>
+              <option value="Not yet endorsed">Not yet endorsed</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-neutral-500 uppercase tracking-widest font-semibold mb-1">Remarks</label>
+            <input type="text" id="edit-vol-remarks" placeholder="Add remarks..." class="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-sm focus:outline-none focus:border-neutral-500" />
           </div>
           <div>
             <label class="block text-xs text-neutral-500 uppercase tracking-widest font-semibold mb-1">Type</label>

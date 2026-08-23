@@ -164,6 +164,15 @@ const allComms = [
 // =============================
 // Helpers
 // =============================
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 function formatTime(isoString) {
   if (!isoString) return "—";
   try {
@@ -2268,6 +2277,26 @@ document.getElementById("back-to-monitor-btn").addEventListener("click", () => {
   monitorView.classList.remove("hidden");
 });
 
+function getVolunteerStatusBadge(v, isOnDuty) {
+  if (isOnDuty) {
+    return `<span class="inline-flex items-center gap-1.5 text-xs bg-green-500/10 text-green-400 border border-green-500/20 px-2.5 py-0.5 rounded-full font-medium whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>In Progress</span>`;
+  }
+  const st = (v.status || "Active").toLowerCase();
+  if (st === "pending" || st.includes("not yet endorsed") || st === "trainee") {
+    return `<span class="inline-flex items-center text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-0.5 rounded-full font-medium whitespace-nowrap">${escapeHtml(v.status || "Pending")}</span>`;
+  }
+  if (st === "complete" || st === "completed") {
+    return `<span class="inline-flex items-center text-xs bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2.5 py-0.5 rounded-full font-medium whitespace-nowrap">Complete</span>`;
+  }
+  if (st === "inactive" || st.includes("inactive")) {
+    return `<span class="inline-flex items-center text-xs bg-neutral-800 text-neutral-400 border border-neutral-700 px-2.5 py-0.5 rounded-full font-medium whitespace-nowrap">Inactive</span>`;
+  }
+  if (st === "active") {
+    return `<span class="inline-flex items-center text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full font-medium whitespace-nowrap">Active</span>`;
+  }
+  return `<span class="inline-flex items-center text-xs bg-neutral-800 text-neutral-300 border border-neutral-700 px-2.5 py-0.5 rounded-full font-medium whitespace-nowrap">${escapeHtml(v.status)}</span>`;
+}
+
 function vtd(content) {
   const el = document.createElement("td");
   el.className = "px-4 py-3 text-sm";
@@ -2279,10 +2308,10 @@ function renderVolunteers() {
   const query = (volSearchInput.value || "").toLowerCase().trim();
   let filtered = allVolunteers;
 
-  // Text search (include nickname)
+  // Text search (include nickname, status, remarks)
   if (query) {
     filtered = filtered.filter((v) =>
-      `${v.name} ${v.nickname} ${v.remarks} ${v.team} ${v.contact} ${v.type} ${v.id}`.toLowerCase().includes(query)
+      `${v.name} ${v.nickname} ${v.status} ${v.remarks} ${v.team} ${v.contact} ${v.type} ${v.id}`.toLowerCase().includes(query)
     );
   }
 
@@ -2304,12 +2333,13 @@ function renderVolunteers() {
     const dir = volSortDir === "asc" ? 1 : -1;
     if (volSortKey === "nickname") return dir * (a.nickname || "").localeCompare(b.nickname || "");
     if (volSortKey === "type") return dir * (a.type || "").localeCompare(b.type || "");
+    if (volSortKey === "status") return dir * (a.status || "").localeCompare(b.status || "");
     if (volSortKey === "remarks") return dir * (a.remarks || "").localeCompare(b.remarks || "");
     return dir * (a.name || "").localeCompare(b.name || "");
   });
 
   // Update sort arrows
-  ["name", "nickname", "type", "remarks"].forEach((k) => {
+  ["name", "nickname", "type", "status", "remarks"].forEach((k) => {
     const el = document.getElementById(`vol-arrow-${k}`);
     if (!el) return;
     if (volSortKey === k) {
@@ -2338,47 +2368,71 @@ function renderVolunteers() {
     const row = document.createElement("tr");
     row.className = "hover:bg-neutral-800 transition duration-150";
 
+    const isOnDuty = activeVolIds.has(v.id);
+
+    // 1. Name
     row.appendChild(vtd(`<span class="font-semibold text-white">${v.name}</span>`));
 
+    // 2. Nickname
     row.appendChild(vtd(v.nickname ? `<span class="text-neutral-300 text-xs font-medium">${v.nickname}</span>` : '<span class="text-neutral-700">—</span>'));
 
+    // 3. Type
     const typeBadge = v.type === "guest"
       ? '<span class="text-xs bg-neutral-700 text-neutral-300 px-2 py-0.5 rounded-full">Guest</span>'
       : '<span class="text-xs bg-neutral-800 text-white px-2 py-0.5 rounded-full">Volunteer</span>';
     row.appendChild(vtd(typeBadge));
 
-    const remarksBadge = v.remarks
-      ? `<span class="text-xs text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md font-medium border border-amber-500/20">${v.remarks}</span>`
-      : '<span class="text-neutral-600">—</span>';
-    row.appendChild(vtd(remarksBadge));
+    // 4. Status Column
+    row.appendChild(vtd(getVolunteerStatusBadge(v, isOnDuty)));
 
+    // 5. Remarks Column (Directly editable inline with auto-save on blur / Enter)
+    const remarksTd = document.createElement("td");
+    remarksTd.className = "px-3 py-2 text-sm max-w-[240px] min-w-[150px]";
+    remarksTd.innerHTML = `
+      <div class="relative flex items-center group/remarks">
+        <input
+          type="text"
+          value="${escapeHtml(v.remarks || '')}"
+          placeholder="Add remarks..."
+          data-id="${v.id}"
+          class="vol-inline-remarks w-full bg-transparent hover:bg-neutral-800/80 focus:bg-neutral-800 text-xs text-neutral-200 placeholder-neutral-600 border border-transparent hover:border-neutral-700/60 focus:border-neutral-600 rounded-lg px-2.5 py-1.5 focus:outline-none transition duration-150"
+          title="${escapeHtml(v.remarks || 'Click to add remarks')}"
+        />
+        <span class="remarks-saved-indicator hidden absolute right-2 text-green-400 material-icons-round text-xs pointer-events-none">check</span>
+      </div>
+    `;
+    row.appendChild(remarksTd);
+
+    // 6. Segments
     const segments = v.team
       ? v.team.split(",").map((s) => `<span class="inline-block text-xs bg-neutral-800 text-neutral-300 px-2 py-0.5 rounded-full mr-1 mb-1">${s.trim()}</span>`).join("")
       : '<span class="text-neutral-600">—</span>';
     row.appendChild(vtd(segments));
 
+    // 7. Contact
     row.appendChild(vtd(v.contact ? `<span class="text-neutral-400 font-mono text-xs">${v.contact}</span>` : '<span class="text-neutral-600">—</span>'));
 
+    // 8. QR Preview
     const qrTd = document.createElement("td");
     qrTd.className = "px-4 py-3 text-sm";
     qrTd.innerHTML = `<button class="qr-preview-btn text-neutral-500 hover:text-white transition" data-id="${v.id}" data-name="${v.name}" data-team="${v.team}"><span class="material-icons-round text-xl">qr_code</span></button>`;
     row.appendChild(qrTd);
 
+    // 9. QR Download
     const dlTd = document.createElement("td");
     dlTd.className = "px-4 py-3 text-sm";
     dlTd.innerHTML = `<button class="qr-download-btn text-neutral-500 hover:text-white transition" data-id="${v.id}" data-name="${v.name}" data-team="${v.team}"><span class="material-icons-round text-base">download</span></button>`;
     row.appendChild(dlTd);
 
-    // Edit button
+    // 10. Edit button
     const editTd = document.createElement("td");
     editTd.className = "px-4 py-3 text-sm";
     editTd.innerHTML = `<button class="vol-edit-btn text-neutral-700 hover:text-white transition" data-id="${v.id}" title="Edit volunteer"><span class="material-icons-round text-base">edit</span></button>`;
     row.appendChild(editTd);
 
-    // Delete button (disabled if on active duty)
+    // 11. Delete button (disabled if on active duty)
     const delTd = document.createElement("td");
     delTd.className = "px-4 py-3 text-sm";
-    const isOnDuty = activeVolIds.has(v.id);
     if (isOnDuty) {
       delTd.innerHTML = `<span class="text-neutral-800 cursor-not-allowed" title="Currently on active duty"><span class="material-icons-round text-base">lock</span></span>`;
     } else {
@@ -2387,6 +2441,37 @@ function renderVolunteers() {
     row.appendChild(delTd);
 
     volTableBody.appendChild(row);
+  });
+
+  // Inline remarks auto-save on blur / Enter
+  document.querySelectorAll(".vol-inline-remarks").forEach((input) => {
+    const saveRemarks = async () => {
+      const newRemarks = input.value.trim();
+      const volId = input.dataset.id;
+      const vol = allVolunteers.find((x) => x.id === volId);
+      if (vol && (vol.remarks || "") !== newRemarks) {
+        vol.remarks = newRemarks;
+        try {
+          await db.ref(`volunteers/${volId}`).update({ remarks: newRemarks || null });
+          input.title = newRemarks || "Click to add remarks";
+          const indicator = input.parentElement.querySelector(".remarks-saved-indicator");
+          if (indicator) {
+            indicator.classList.remove("hidden");
+            setTimeout(() => indicator.classList.add("hidden"), 1500);
+          }
+        } catch (err) {
+          console.error("Failed to save remarks:", err);
+          showToast("Failed to save remarks", "error", "text-red-400");
+        }
+      }
+    };
+
+    input.addEventListener("blur", saveRemarks);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        input.blur();
+      }
+    });
   });
 
   document.querySelectorAll(".qr-preview-btn").forEach((btn) => {
@@ -2415,7 +2500,7 @@ function renderVolunteers() {
 volSearchInput.addEventListener("input", renderVolunteers);
 
 // Volunteer table sort headers
-["name", "nickname", "type", "remarks"].forEach((key) => {
+["name", "nickname", "type", "status", "remarks"].forEach((key) => {
   document.getElementById(`vol-th-${key}`)?.addEventListener("click", () => {
     if (volSortKey === key) {
       volSortDir = volSortDir === "asc" ? "desc" : "asc";
@@ -2507,6 +2592,8 @@ function openEditModal(vol) {
   document.getElementById("edit-vol-id").value = vol.id;
   document.getElementById("edit-vol-name").value = vol.name;
   document.getElementById("edit-vol-nickname").value = vol.nickname || "";
+  const statusSelect = document.getElementById("edit-vol-status");
+  if (statusSelect) statusSelect.value = vol.status || "Active";
   const remarksInput = document.getElementById("edit-vol-remarks");
   if (remarksInput) remarksInput.value = vol.remarks || "";
   document.getElementById("edit-vol-contact").value = vol.contact || "";
@@ -2575,6 +2662,7 @@ document.getElementById("edit-vol-save").addEventListener("click", async () => {
   const name = document.getElementById("edit-vol-name").value.trim();
   const nickname = document.getElementById("edit-vol-nickname").value.trim();
   const contact = document.getElementById("edit-vol-contact").value.trim();
+  const status = document.getElementById("edit-vol-status")?.value || "Active";
   const remarks = (document.getElementById("edit-vol-remarks")?.value || "").trim();
   if (!name) return;
 
@@ -2583,6 +2671,7 @@ document.getElementById("edit-vol-save").addEventListener("click", async () => {
     name,
     nickname: nickname || null,
     type: editSelectedType,
+    status: status || "Active",
     remarks: remarks || null,
     team: team || null,
     contact: contact || null,
@@ -2797,9 +2886,35 @@ document.getElementById("sync-sheets-btn").addEventListener("click", async () =>
 // Load volunteers
 db.ref("volunteers").on("value", (snapshot) => {
   const data = snapshot.val() || {};
-  allVolunteers = Object.entries(data).map(([id, v]) => ({
-    id, name: v.name || "—", nickname: v.nickname || "", type: v.type || "volunteer", remarks: v.remarks || "", team: v.team || "", contact: v.contact || "", registeredAt: v.registeredAt || "",
-  }));
+  allVolunteers = Object.entries(data).map(([id, v]) => {
+    let volStatus = v.status || "";
+    const volRemarks = v.remarks || "";
+    if (!volStatus) {
+      const rLow = volRemarks.toLowerCase();
+      if (rLow === "inactive - inactive" || rLow === "inactive") {
+        volStatus = "Inactive";
+      } else if (rLow === "not yet endorsed") {
+        volStatus = "Not yet endorsed";
+      } else if (rLow === "trainee") {
+        volStatus = "Trainee";
+      } else if (rLow === "pending") {
+        volStatus = "Pending";
+      } else {
+        volStatus = "Active";
+      }
+    }
+    return {
+      id,
+      name: v.name || "—",
+      nickname: v.nickname || "",
+      type: v.type || "volunteer",
+      status: volStatus,
+      remarks: volRemarks,
+      team: v.team || "",
+      contact: v.contact || "",
+      registeredAt: v.registeredAt || "",
+    };
+  });
   allVolunteers.sort((a, b) => a.name.localeCompare(b.name));
   // Rebuild nickname map: volunteerId -> nickname if set, else first name
   volunteerNicknameMap = {};
