@@ -1733,6 +1733,7 @@ document.getElementById("download-xlsx-btn").addEventListener("click", async () 
       { header: "Queue #",   key: "queue",      width: 9  },
       { header: "Status",    key: "status",     width: 12 },
       { header: "Seg ID",    key: "segId",      width: 9  },
+        { header: "Access ID", key: "accessId",   width: 12 },
       { header: "Time In",   key: "timeIn",     width: 11 },
       { header: "Time Out",  key: "timeOut",    width: 11 },
       { header: "Duration",  key: "duration",   width: 10 },

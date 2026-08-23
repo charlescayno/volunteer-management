@@ -1106,6 +1106,9 @@ if (document.getElementById("segment-form")) {
       document.getElementById("comms-segment-label").textContent = segment;
       document.getElementById("comms-role-label").textContent = role;
       document.getElementById("numbered-id-input").value = "";
+      if (document.getElementById("access-id-input")) {
+        document.getElementById("access-id-input").value = "";
+      }
 
       // Check if comms is currently in use by someone else
       let commsOccupied = false;
@@ -1194,6 +1197,7 @@ function startPendingListener() {
       const commsText = document.getElementById("assigned-comms-id").textContent || "—";
       const timeText = document.getElementById("comms-time-in").textContent;
       const numberedId = data.numberedId || "";
+      const accessId = data.accessId || "";
 
       currentLogKey = pendingKey;
       pendingTimeIn = null;
@@ -1224,6 +1228,12 @@ function startPendingListener() {
       if (numberedId) {
         document.getElementById("final-seg-id").textContent = "#" + numberedId;
         document.getElementById("final-segid-block").classList.remove("hidden");
+        if (data && data.accessId) {
+          document.getElementById("final-access-id").textContent = data.accessId;
+          document.getElementById("final-accessid-block").classList.remove("hidden");
+        } else {
+          document.getElementById("final-accessid-block").classList.add("hidden");
+        }
       } else {
         document.getElementById("final-segid-block").classList.add("hidden");
       }
