@@ -2297,9 +2297,9 @@ function getVolunteerStatusBadge(v, isOnDuty) {
   return `<span class="inline-flex items-center text-xs bg-neutral-800 text-neutral-300 border border-neutral-700 px-2.5 py-0.5 rounded-full font-medium whitespace-nowrap">${escapeHtml(v.status)}</span>`;
 }
 
-function vtd(content) {
+function vtd(content, extraClasses = "") {
   const el = document.createElement("td");
-  el.className = "px-4 py-3 text-sm";
+  el.className = `px-4 py-3 text-sm ${extraClasses}`.trim();
   el.innerHTML = content;
   return el;
 }
@@ -2344,9 +2344,10 @@ function renderVolunteers() {
     if (!el) return;
     if (volSortKey === k) {
       el.textContent = volSortDir === "asc" ? "↑" : "↓";
-      el.className = "font-mono text-white text-[10px]";
+      el.className = "font-mono text-white text-[10px] ml-1 inline-block";
     } else {
       el.textContent = "";
+      el.className = "font-mono text-[10px] ml-1 inline-block";
     }
   });
 
@@ -2383,19 +2384,19 @@ function renderVolunteers() {
     row.appendChild(vtd(typeBadge));
 
     // 4. Status Column
-    row.appendChild(vtd(getVolunteerStatusBadge(v, isOnDuty)));
+    row.appendChild(vtd(getVolunteerStatusBadge(v, isOnDuty), "whitespace-nowrap min-w-[130px]"));
 
     // 5. Remarks Column (Directly editable inline with auto-save on blur / Enter)
     const remarksTd = document.createElement("td");
-    remarksTd.className = "px-3 py-2 text-sm max-w-[240px] min-w-[150px]";
+    remarksTd.className = "px-4 py-3 text-sm min-w-[220px] max-w-[320px]";
     remarksTd.innerHTML = `
-      <div class="relative flex items-center group/remarks">
+      <div class="relative flex items-center group/remarks w-full min-w-[200px]">
         <input
           type="text"
           value="${escapeHtml(v.remarks || '')}"
           placeholder="Add remarks..."
           data-id="${v.id}"
-          class="vol-inline-remarks w-full bg-transparent hover:bg-neutral-800/80 focus:bg-neutral-800 text-xs text-neutral-200 placeholder-neutral-600 border border-transparent hover:border-neutral-700/60 focus:border-neutral-600 rounded-lg px-2.5 py-1.5 focus:outline-none transition duration-150"
+          class="vol-inline-remarks w-full bg-transparent hover:bg-neutral-800/80 focus:bg-neutral-800 text-xs text-neutral-200 placeholder-neutral-600 border border-transparent hover:border-neutral-700/60 focus:border-neutral-600 rounded-lg px-3 py-1.5 focus:outline-none transition duration-150 truncate focus:whitespace-normal"
           title="${escapeHtml(v.remarks || 'Click to add remarks')}"
         />
         <span class="remarks-saved-indicator hidden absolute right-2 text-green-400 material-icons-round text-xs pointer-events-none">check</span>
