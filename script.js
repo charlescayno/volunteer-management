@@ -1,32 +1,223 @@
 
 // =============================
-// Audio Feedback Web API
+// Audio & Haptic Feedback Web API
 // =============================
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-function playTone(type) {
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-  const osc = audioCtx.createOscillator();
-  const gainNode = audioCtx.createGain();
-  osc.connect(gainNode);
-  gainNode.connect(audioCtx.destination);
+let audioCtx = null;
+let soundEnabled = localStorage.getItem("vm_sound_enabled") !== "false";
 
-  if (type === 'success') {
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
-    osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1); // E5
-    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.3);
-  } else if (type === 'error') {
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-    osc.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 0.3);
-    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.3);
+function initAudioContext() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
+  if (audioCtx.state === "suspended") {
+    audioCtx.resume();
+  }
+}
+
+function triggerHaptic(type = "light") {
+  if (!navigator.vibrate) return;
+  try {
+    if (type === "checkin") navigator.vibrate([60, 40, 80]);
+    else if (type === "checkout") navigator.vibrate([80, 50]);
+    else if (type === "warning") navigator.vibrate([100, 50, 100, 50, 120]);
+    else navigator.vibrate(40);
+  } catch (e) {}
+}
+
+function playTone(type) {
+  if (!soundEnabled) return;
+  try {
+    initAudioContext();
+    const now = audioCtx.currentTime;
+
+    if (type === "checkin" || type === "success") {
+      // Cheerful melodic chime: C5 (523.25Hz) -> E5 (659.25Hz) -> G5 (783.99Hz)
+      const freqs = [523.25, 659.25, 783.99];
+      freqs.forEach((freq, idx) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+        gain.gain.setValueAtTime(0.001, now + idx * 0.08);
+        gain.gain.linearRampToValueAtTime(0.12, now + idx * 0.08 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.35);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now + idx * 0.08);
+        osc.stop(now + idx * 0.08 + 0.35);
+      });
+      triggerHaptic("checkin");
+    } else if (type === "checkout") {
+      // Gentle resolving chime: G5 (783.99Hz) -> E5 (659.25Hz) -> C5 (523.25Hz)
+      const freqs = [783.99, 659.25, 523.25];
+      freqs.forEach((freq, idx) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(freq, now + idx * 0.09);
+        gain.gain.setValueAtTime(0.001, now + idx * 0.09);
+        gain.gain.linearRampToValueAtTime(0.12, now + idx * 0.09 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.09 + 0.4);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now + idx * 0.09);
+        osc.stop(now + idx * 0.09 + 0.4);
+      });
+      triggerHaptic("checkout");
+    } else if (type === "warning" || type === "error") {
+      // Double warning buzz
+      [0, 0.14].forEach((delay) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(240, now + delay);
+        osc.frequency.linearRampToValueAtTime(160, now + delay + 0.1);
+        gain.gain.setValueAtTime(0.1, now + delay);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.12);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now + delay);
+        osc.stop(now + delay + 0.12);
+      });
+      triggerHaptic("warning");
+    } else if (type === "blip") {
+      // Crisp high blip
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, now);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.08);
+      triggerHaptic("blip");
+    }
+  } catch (e) {
+    console.warn("Audio playback error:", e);
+  }
+}
+
+// Scan Mode State & Fast-Scan Logic
+let currentScanMode = localStorage.getItem("vm_scan_mode") || "standard";
+let fastScanTimeoutTimer = null;
+
+function updateScanModeUI() {
+  const stdBtn = document.getElementById("scan-mode-standard");
+  const fastBtn = document.getElementById("scan-mode-fast");
+  if (!stdBtn || !fastBtn) return;
+  if (currentScanMode === "fast") {
+    fastBtn.className = "px-2.5 py-1 rounded-md transition duration-150 bg-amber-400 text-neutral-950 font-bold shadow-sm flex items-center gap-1";
+    stdBtn.className = "px-2.5 py-1 rounded-md transition duration-150 text-neutral-500 hover:text-neutral-900 font-semibold";
+  } else {
+    stdBtn.className = "px-2.5 py-1 rounded-md transition duration-150 bg-white text-neutral-900 shadow-sm font-semibold";
+    fastBtn.className = "px-2.5 py-1 rounded-md transition duration-150 text-neutral-500 hover:text-neutral-900 flex items-center gap-1";
+  }
+}
+
+function updateSoundToggleUI() {
+  const icon = document.getElementById("scan-sound-icon");
+  const btn = document.getElementById("scan-sound-toggle");
+  if (!icon || !btn) return;
+  if (soundEnabled) {
+    icon.textContent = "volume_up";
+    icon.className = "material-icons-round text-base text-neutral-700";
+    btn.title = "Sound feedback enabled (Click to mute)";
+  } else {
+    icon.textContent = "volume_off";
+    icon.className = "material-icons-round text-base text-neutral-400";
+    btn.title = "Sound feedback muted (Click to enable)";
+  }
+}
+
+function initScanModeAndSound() {
+  updateScanModeUI();
+  updateSoundToggleUI();
+
+  document.getElementById("scan-mode-standard")?.addEventListener("click", () => {
+    currentScanMode = "standard";
+    localStorage.setItem("vm_scan_mode", "standard");
+    updateScanModeUI();
+    playTone("blip");
+  });
+
+  document.getElementById("scan-mode-fast")?.addEventListener("click", () => {
+    currentScanMode = "fast";
+    localStorage.setItem("vm_scan_mode", "fast");
+    updateScanModeUI();
+    playTone("blip");
+  });
+
+  document.getElementById("scan-sound-toggle")?.addEventListener("click", () => {
+    soundEnabled = !soundEnabled;
+    localStorage.setItem("vm_sound_enabled", soundEnabled ? "true" : "false");
+    updateSoundToggleUI();
+    if (soundEnabled) playTone("blip");
+  });
+}
+
+function showFastScanOverlay({ type, name, detail, onCancel }) {
+  const overlay = document.getElementById("fast-scan-overlay");
+  const iconCont = document.getElementById("fast-scan-icon-container");
+  const icon = document.getElementById("fast-scan-icon");
+  const badge = document.getElementById("fast-scan-badge");
+  const nameEl = document.getElementById("fast-scan-name");
+  const detailEl = document.getElementById("fast-scan-detail");
+  const progressEl = document.getElementById("fast-scan-progress");
+  const cancelBtn = document.getElementById("fast-scan-cancel-btn");
+
+  if (!overlay) return;
+
+  if (type === "checkin") {
+    iconCont.className = "w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center mb-3.5 shadow-lg shadow-emerald-900/30";
+    icon.className = "material-icons-round text-3xl text-emerald-400";
+    icon.textContent = "login";
+    badge.className = "inline-block text-[11px] font-bold uppercase tracking-wider px-3 py-0.5 rounded-full mb-1.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+    badge.textContent = "Checked In";
+    progressEl.className = "bg-emerald-400 h-full w-full";
+  } else {
+    iconCont.className = "w-16 h-16 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center mb-3.5 shadow-lg shadow-red-900/30";
+    icon.className = "material-icons-round text-3xl text-red-400";
+    icon.textContent = "logout";
+    badge.className = "inline-block text-[11px] font-bold uppercase tracking-wider px-3 py-0.5 rounded-full mb-1.5 bg-red-500/20 text-red-400 border border-red-500/30";
+    badge.textContent = "Timed Out";
+    progressEl.className = "bg-red-400 h-full w-full";
+  }
+
+  nameEl.textContent = name;
+  detailEl.textContent = detail;
+
+  // Reset progress animation
+  progressEl.style.transition = "none";
+  progressEl.style.width = "100%";
+  overlay.classList.remove("hidden");
+
+  setTimeout(() => {
+    progressEl.style.transition = "width 2s linear";
+    progressEl.style.width = "0%";
+  }, 20);
+
+  let cancelled = false;
+  if (cancelBtn) {
+    cancelBtn.onclick = () => {
+      cancelled = true;
+      clearTimeout(fastScanTimeoutTimer);
+      overlay.classList.add("hidden");
+      if (onCancel) onCancel();
+    };
+  }
+
+  if (fastScanTimeoutTimer) clearTimeout(fastScanTimeoutTimer);
+  fastScanTimeoutTimer = setTimeout(() => {
+    if (cancelled) return;
+    overlay.classList.add("hidden");
+    volunteerId = null;
+    volunteerName = null;
+    volunteerTeam = null;
+    currentLogKey = null;
+    startQrScanner();
+  }, 2100);
 }
 
 /*
@@ -272,6 +463,7 @@ const startQrScanner = async () => {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
+  initScanModeAndSound();
   if (document.getElementById("qr-scanner-area")) {
     startQrScanner();
   }
@@ -367,6 +559,77 @@ async function handleVolunteerScan(id) {
     }
 
     currentLogKey = activeLogKey;
+
+    // Fast-Scan Mode automatic routing
+    if (currentScanMode === "fast") {
+      hideLoading();
+      if (activeLog) {
+        // FAST SCAN: Time Out
+        const now = new Date().toISOString();
+        await db.ref(`logs/${date}/${activeLogKey}`).update({
+          timeOut: now,
+          status: null,
+          commsStatusOut: "OK",
+        });
+
+        const commsId = activeLog.commsId;
+        if (commsId && commsId !== "NONE") {
+          db.ref(`logs/${date}/${activeLogKey}/commsReleased`).set(true);
+        }
+
+        playTone("checkout");
+        showFastScanOverlay({
+          type: "checkout",
+          name: volunteerName,
+          detail: `Timed Out · ${activeLog.segment || 'Volunteer'} · ${(activeLog.role || '')}`,
+          onCancel: () => {
+            showStage("timeout");
+          }
+        });
+        return;
+      } else {
+        // FAST SCAN: Check In
+        const now = new Date().toISOString();
+        let defaultSeg = "Volunteer";
+        if (volunteerTeam) {
+          const segs = volunteerTeam.split(",").map(s => s.trim()).filter(Boolean);
+          if (segs.length > 0) defaultSeg = segs[0];
+        }
+        const defaultRole = volunteerData.role || defaultSeg || "Volunteer";
+
+        if (!selectedServices || selectedServices.size === 0) {
+          initServicePills();
+        }
+        const svcs = Array.from(selectedServices);
+
+        const newLogRef = db.ref(`logs/${date}`).push();
+        currentLogKey = newLogRef.key;
+        const logData = {
+          volunteerId,
+          name: volunteerName,
+          segment: defaultSeg,
+          role: defaultRole,
+          services: svcs,
+          timeIn: now,
+          timeOut: null,
+          commsId: "NONE",
+          status: null,
+          noId: true,
+        };
+
+        await newLogRef.set(logData);
+        playTone("checkin");
+        showFastScanOverlay({
+          type: "checkin",
+          name: volunteerName,
+          detail: `Checked In · ${defaultSeg} · ${svcs.join(", ")}`,
+          onCancel: () => {
+            showStage("segment");
+          }
+        });
+        return;
+      }
+    }
 
     if (activeLog && activeLog.status === "pending") {
       // Still pending time-in → resume waiting for admin confirmation

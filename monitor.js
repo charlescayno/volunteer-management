@@ -1,5 +1,137 @@
 
 // =============================
+// Audio Feedback Web API (Monitor)
+// =============================
+let monitorAudioCtx = null;
+let monitorSoundEnabled = localStorage.getItem("vm_monitor_sound") !== "false";
+
+function initMonitorAudio() {
+  if (!monitorAudioCtx) {
+    monitorAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (monitorAudioCtx.state === "suspended") {
+    monitorAudioCtx.resume();
+  }
+}
+
+function playTone(type) {
+  if (!monitorSoundEnabled) return;
+  try {
+    initMonitorAudio();
+    const now = monitorAudioCtx.currentTime;
+
+    if (type === "checkin" || type === "success") {
+      const freqs = [523.25, 659.25, 783.99];
+      freqs.forEach((freq, idx) => {
+        const osc = monitorAudioCtx.createOscillator();
+        const gain = monitorAudioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+        gain.gain.setValueAtTime(0.001, now + idx * 0.08);
+        gain.gain.linearRampToValueAtTime(0.12, now + idx * 0.08 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.35);
+        osc.connect(gain);
+        gain.connect(monitorAudioCtx.destination);
+        osc.start(now + idx * 0.08);
+        osc.stop(now + idx * 0.08 + 0.35);
+      });
+    } else if (type === "checkout") {
+      const freqs = [783.99, 659.25, 523.25];
+      freqs.forEach((freq, idx) => {
+        const osc = monitorAudioCtx.createOscillator();
+        const gain = monitorAudioCtx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(freq, now + idx * 0.09);
+        gain.gain.setValueAtTime(0.001, now + idx * 0.09);
+        gain.gain.linearRampToValueAtTime(0.12, now + idx * 0.09 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.09 + 0.4);
+        osc.connect(gain);
+        gain.connect(monitorAudioCtx.destination);
+        osc.start(now + idx * 0.09);
+        osc.stop(now + idx * 0.09 + 0.4);
+      });
+    } else if (type === "warning" || type === "error") {
+      [0, 0.14].forEach((delay) => {
+        const osc = monitorAudioCtx.createOscillator();
+        const gain = monitorAudioCtx.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(240, now + delay);
+        osc.frequency.linearRampToValueAtTime(160, now + delay + 0.1);
+        gain.gain.setValueAtTime(0.1, now + delay);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.12);
+        osc.connect(gain);
+        gain.connect(monitorAudioCtx.destination);
+        osc.start(now + delay);
+        osc.stop(now + delay + 0.12);
+      });
+    } else if (type === "blip") {
+      const osc = monitorAudioCtx.createOscillator();
+      const gain = monitorAudioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, now);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      osc.connect(gain);
+      gain.connect(monitorAudioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.08);
+    }
+  } catch (e) {
+    console.warn("Monitor audio error:", e);
+  }
+}
+
+// Sound toggle handler
+const monitorSoundToggleBtn = document.getElementById("monitor-sound-toggle");
+const monitorSoundIcon = document.getElementById("monitor-sound-icon");
+
+function updateMonitorSoundUI() {
+  if (!monitorSoundIcon || !monitorSoundToggleBtn) return;
+  if (monitorSoundEnabled) {
+    monitorSoundIcon.textContent = "volume_up";
+    monitorSoundIcon.className = "material-icons-round text-base text-neutral-300";
+    monitorSoundToggleBtn.title = "Sound feedback enabled (Click to mute)";
+  } else {
+    monitorSoundIcon.textContent = "volume_off";
+    monitorSoundIcon.className = "material-icons-round text-base text-neutral-500";
+    monitorSoundToggleBtn.title = "Sound feedback muted (Click to enable)";
+  }
+}
+
+if (monitorSoundToggleBtn) {
+  updateMonitorSoundUI();
+  monitorSoundToggleBtn.addEventListener("click", () => {
+    monitorSoundEnabled = !monitorSoundEnabled;
+    localStorage.setItem("vm_monitor_sound", monitorSoundEnabled ? "true" : "false");
+    updateMonitorSoundUI();
+    if (monitorSoundEnabled) playTone("blip");
+  });
+}
+
+// =============================
+// Admin Audit Trail / Activity Logger
+// =============================
+let todayAuditLogs = {};
+let currentAuditFilter = "all";
+
+function logAuditEvent(action, details, type = "admin", user = "Admin") {
+  const date = getPHDate();
+  const event = {
+    action,
+    details,
+    type,
+    user,
+    timestamp: new Date().toISOString()
+  };
+  db.ref(`auditLogs/${date}`).push(event).catch(err => console.error("Audit log error:", err));
+}
+
+// Comms Condition / Battery Tracker State
+let commsConditionMap = {};
+let selectedCommsConditionCode = null;
+let selectedCommsConditionStatus = "ok";
+
+// =============================
 // Auto-Logout Past Days
 // =============================
 async function enforceAutoLogout(allDatesObj) {
@@ -1064,15 +1196,29 @@ function renderCommsView(map) {
     { label: "6PM", value: "6PM", current: commsPmFilter, colorActive: "bg-violet-500 text-white", colorInactive: "text-neutral-500 hover:text-violet-400" },
   ];
 
+  function getCommsConditionBadgeHtml(code) {
+    const cond = commsConditionMap[code] || { status: "ok", note: "" };
+    if (cond.status === "low_battery") {
+      return `<button type="button" class="comms-condition-trigger text-[8px] font-bold text-amber-400 bg-amber-500/20 border border-amber-500/40 px-1 py-0.2 rounded flex items-center gap-0.5 cursor-pointer hover:bg-amber-500/30 transition" data-comms="${code}" title="${cond.note || 'Low Battery'}"><span class="material-icons-round" style="font-size:9px">battery_alert</span>Low</button>`;
+    } else if (cond.status === "faulty") {
+      return `<button type="button" class="comms-condition-trigger text-[8px] font-bold text-red-400 bg-red-500/20 border border-red-500/40 px-1 py-0.2 rounded flex items-center gap-0.5 cursor-pointer hover:bg-red-500/30 transition" data-comms="${code}" title="${cond.note || 'Needs Repair'}"><span class="material-icons-round" style="font-size:9px">build</span>Repair</button>`;
+    } else if (cond.status === "charging") {
+      return `<button type="button" class="comms-condition-trigger text-[8px] font-bold text-sky-400 bg-sky-500/20 border border-sky-500/40 px-1 py-0.2 rounded flex items-center gap-0.5 cursor-pointer hover:bg-sky-500/30 transition" data-comms="${code}" title="${cond.note || 'Charging'}"><span class="material-icons-round" style="font-size:9px">battery_charging_full</span>Charge</button>`;
+    }
+    return `<button type="button" class="comms-condition-trigger text-neutral-600 hover:text-amber-400 transition cursor-pointer p-0.5" data-comms="${code}" title="Set condition / battery status"><span class="material-icons-round" style="font-size:10px">battery_saver</span></button>`;
+  }
+
   function gridCell(c, batchMap, queueMap) {
     const active = batchMap[c.code];
     const queued = queueMap[c.code];
+    const condBadge = getCommsConditionBadgeHtml(c.code);
     if (active) {
       if (active._isPending) {
         const displayName = volunteerNicknameMap[active.volunteerId] || (active.name || "").split(" ")[0];
         const pPos = active._queuePos || 2;
         const pTotal = active._queueTotal || 2;
-        return `<div class="rounded-lg border border-amber-500/40 bg-amber-500/5 p-2 flex flex-col items-center gap-1 min-w-0">
+        return `<div class="relative rounded-lg border border-amber-500/40 bg-amber-500/5 p-2 flex flex-col items-center gap-1 min-w-0 group">
+          <div class="absolute top-1 right-1">${condBadge}</div>
           <span class="font-mono font-black text-amber-400 text-base leading-none">${c.code}</span>
           <span class="text-[9px] text-neutral-500 text-center leading-tight truncate w-full">${c.assignment}</span>
           <span class="text-[10px] font-semibold text-amber-300 text-center leading-tight truncate w-full">${displayName}</span>
@@ -1084,7 +1230,8 @@ function renderCommsView(map) {
       const queuedName = queued ? (volunteerNicknameMap[queued.volunteerId] || (queued.name || "").split(" ")[0]) : null;
       const qTotal = active._queueTotal || 1;
       const posBadge = qTotal > 1 ? `<span class="text-[8px] font-bold text-green-500 font-mono bg-green-500/10 px-1.5 py-0.5 rounded-full">#1 of ${qTotal}</span>` : "";
-      return `<div class="rounded-lg border border-green-500/40 bg-green-500/5 p-2 flex flex-col items-center gap-1 min-w-0">
+      return `<div class="relative rounded-lg border border-green-500/40 bg-green-500/5 p-2 flex flex-col items-center gap-1 min-w-0 group">
+        <div class="absolute top-1 right-1">${condBadge}</div>
         <span class="font-mono font-black text-green-400 text-base leading-none">${c.code}</span>
         <span class="text-[9px] text-neutral-500 text-center leading-tight truncate w-full">${c.assignment}</span>
         <span class="text-[10px] font-semibold text-white text-center leading-tight truncate w-full">${displayName}</span>
@@ -1095,7 +1242,8 @@ function renderCommsView(map) {
     }
     if (queued) {
       const displayName = volunteerNicknameMap[queued.volunteerId] || (queued.name || "").split(" ")[0];
-      return `<div class="rounded-lg border border-amber-500/40 bg-amber-500/5 p-2 flex flex-col items-center gap-1 min-w-0">
+      return `<div class="relative rounded-lg border border-amber-500/40 bg-amber-500/5 p-2 flex flex-col items-center gap-1 min-w-0 group">
+        <div class="absolute top-1 right-1">${condBadge}</div>
         <span class="font-mono font-black text-amber-400 text-base leading-none">${c.code}</span>
         <span class="text-[9px] text-neutral-500 text-center leading-tight truncate w-full">${c.assignment}</span>
         <span class="material-icons-round text-amber-500" style="font-size:11px">hourglass_top</span>
@@ -1104,10 +1252,11 @@ function renderCommsView(map) {
       </div>`;
     }
     const otherBatch = map[c.code];
-    return `<div class="rounded-lg border border-neutral-800 bg-neutral-900/50 p-2 flex flex-col items-center gap-1 min-w-0 opacity-40">
+    return `<div class="relative rounded-lg border border-neutral-800 bg-neutral-900/50 p-2 flex flex-col items-center gap-1 min-w-0 opacity-60 hover:opacity-100 group transition">
+      <div class="absolute top-1 right-1">${condBadge}</div>
       <span class="font-mono font-bold text-neutral-500 text-base leading-none">${c.code}</span>
-      <span class="text-[9px] text-neutral-700 text-center leading-tight truncate w-full">${c.assignment}</span>
-      <span class="text-[9px] text-neutral-700">${otherBatch ? "Other batch" : "—"}</span>
+      <span class="text-[9px] text-neutral-600 text-center leading-tight truncate w-full">${c.assignment}</span>
+      <span class="text-[9px] text-neutral-600">${otherBatch ? "Other batch" : "Available"}</span>
     </div>`;
   }
 
@@ -1258,10 +1407,19 @@ function renderCommsView(map) {
         await db.ref(`logs/${todayDate}/${key}`).update({ timeOut: now, status: null, commsStatusOut: "OK" });
         await releaseCommsOrAutoAssign(comms);
         syncToSheets({ action: "timeOut", logKey: key, timeOut: now, timeIn: time });
+        logAuditEvent("FORCE_TIMEOUT", `Force timed out "${name}" (Comms: ${comms || 'None'})`, "force_timeout");
         showToast(`"${name}" timed out`, "logout", "text-red-400");
       });
     });
   }
+
+  // Attach comms condition popup triggers
+  content.querySelectorAll(".comms-condition-trigger").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openCommsConditionModal(btn.dataset.comms);
+    });
+  });
 }
 
 // View toggle handlers
@@ -2487,7 +2645,9 @@ function renderVolunteers() {
       const confirmed = await showConfirm(`Delete volunteer "${name}"? This cannot be undone.`);
       if (!confirmed) return;
       await db.ref(`volunteers/${id}`).remove();
+      logAuditEvent("VOLUNTEER_DELETE", `Deleted volunteer "${name}" (ID: ${id})`, "volunteer");
       showToast(`"${name}" deleted`, "delete", "text-red-400");
+      playTone("warning");
     });
   });
   document.querySelectorAll(".vol-edit-btn").forEach((btn) => {
@@ -2678,8 +2838,10 @@ document.getElementById("edit-vol-save").addEventListener("click", async () => {
     contact: contact || null,
   });
 
+  logAuditEvent("VOLUNTEER_EDIT", `Updated volunteer "${name}" (Status: ${status || 'Active'}, Segments: ${team || 'None'})`, "volunteer");
   editModal.classList.add("hidden");
   showToast(`"${name}" updated`, "check_circle", "text-green-400");
+  playTone("checkin");
 });
 
 // QR Modal
@@ -2954,7 +3116,9 @@ document.getElementById("force-timeout-all-btn")?.addEventListener("click", asyn
     syncToSheets({ action: "timeOut", logKey: key, timeOut: now, timeIn: log.timeIn });
   }
 
+  logAuditEvent("FORCE_TIMEOUT_ALL", `Forced time-out for ${activeLogs.length} active volunteers`, "force_timeout");
   showToast("All active volunteers timed out", "check_circle", "text-green-400");
+  playTone("checkout");
 });
 
 
@@ -2976,3 +3140,345 @@ function enforceYesterdayAutoLogout() {
 }
 // Run it shortly after page load
 setTimeout(enforceYesterdayAutoLogout, 2000);
+
+
+// =============================
+// Comms Condition / Battery Modal Logic
+// =============================
+const commsCondModal = document.getElementById("comms-condition-modal");
+const commsCondCodeEl = document.getElementById("comms-condition-code");
+const commsCondNoteInput = document.getElementById("comms-condition-note");
+const commsCondUpdatedEl = document.getElementById("comms-condition-last-updated");
+
+function updateCommsConditionSummary() {
+  const countEl = document.getElementById("comms-toggle-count");
+  if (!countEl) return;
+  let lowCount = 0, repairCount = 0, chargeCount = 0;
+  Object.values(commsConditionMap).forEach(c => {
+    if (c.status === "low_battery") lowCount++;
+    else if (c.status === "faulty") repairCount++;
+    else if (c.status === "charging") chargeCount++;
+  });
+  const parts = [`${allComms.length} units`];
+  if (lowCount > 0) parts.push(`${lowCount} low batt`);
+  if (repairCount > 0) parts.push(`${repairCount} in repair`);
+  if (chargeCount > 0) parts.push(`${chargeCount} charging`);
+  countEl.textContent = `(${parts.join(" · ")})`;
+}
+
+function openCommsConditionModal(code) {
+  if (!commsCondModal || !code) return;
+  selectedCommsConditionCode = code;
+  commsCondCodeEl.textContent = code;
+
+  const currentData = commsConditionMap[code] || { status: "ok", note: "", updatedAt: "" };
+  selectedCommsConditionStatus = currentData.status || "ok";
+  if (commsCondNoteInput) commsCondNoteInput.value = currentData.note || "";
+  if (commsCondUpdatedEl) {
+    commsCondUpdatedEl.textContent = currentData.updatedAt
+      ? `Last updated: ${new Date(currentData.updatedAt).toLocaleDateString()} ${new Date(currentData.updatedAt).toLocaleTimeString()}`
+      : "No maintenance history recorded";
+  }
+
+  updateConditionSelectorButtons();
+  commsCondModal.classList.remove("hidden");
+}
+
+function updateConditionSelectorButtons() {
+  document.querySelectorAll(".comms-status-opt").forEach(btn => {
+    const val = btn.dataset.val;
+    if (val === selectedCommsConditionStatus) {
+      btn.className = "comms-status-opt flex items-center gap-2 p-2.5 rounded-xl border border-white bg-white/10 text-xs font-bold text-white shadow-sm transition";
+    } else {
+      btn.className = "comms-status-opt flex items-center gap-2 p-2.5 rounded-xl border border-neutral-700 bg-neutral-800/80 text-xs font-semibold text-neutral-400 hover:border-neutral-500 transition";
+    }
+  });
+}
+
+document.querySelectorAll(".comms-status-opt").forEach(btn => {
+  btn.addEventListener("click", () => {
+    selectedCommsConditionStatus = btn.dataset.val;
+    updateConditionSelectorButtons();
+  });
+});
+
+document.getElementById("comms-condition-close")?.addEventListener("click", () => commsCondModal.classList.add("hidden"));
+document.getElementById("comms-condition-cancel")?.addEventListener("click", () => commsCondModal.classList.add("hidden"));
+
+document.getElementById("comms-condition-save")?.addEventListener("click", async () => {
+  if (!selectedCommsConditionCode) return;
+  const note = (commsCondNoteInput?.value || "").trim();
+  const now = new Date().toISOString();
+
+  await db.ref(`commsCondition/${selectedCommsConditionCode}`).set({
+    status: selectedCommsConditionStatus,
+    note,
+    updatedAt: now,
+    updatedBy: "Admin"
+  });
+
+  logAuditEvent(
+    "COMMS_CONDITION",
+    `Set ${selectedCommsConditionCode} to "${selectedCommsConditionStatus}" (${note || 'No notes'})`,
+    "comms_condition"
+  );
+
+  commsCondModal.classList.add("hidden");
+  showToast(`Comms ${selectedCommsConditionCode} condition saved`, "check_circle", "text-green-400");
+  playTone("checkin");
+});
+
+document.getElementById("comms-condition-clear")?.addEventListener("click", async () => {
+  if (!selectedCommsConditionCode) return;
+  const now = new Date().toISOString();
+  await db.ref(`commsCondition/${selectedCommsConditionCode}`).set({
+    status: "ok",
+    note: "",
+    updatedAt: now,
+    updatedBy: "Admin"
+  });
+
+  logAuditEvent("COMMS_CONDITION", `Reset ${selectedCommsConditionCode} to Good / Normal`, "comms_condition");
+  commsCondModal.classList.add("hidden");
+  showToast(`Comms ${selectedCommsConditionCode} reset to Good`, "check_circle", "text-green-400");
+});
+
+// Comms Condition Firebase Listener
+db.ref("commsCondition").on("value", (snap) => {
+  commsConditionMap = snap.val() || {};
+  renderCommsView(activeCommsMap);
+  updateCommsConditionSummary();
+});
+
+// =============================
+// Activity Log / Audit Trail Logic
+// =============================
+const activityLogModal = document.getElementById("activity-log-modal");
+const activityLogList = document.getElementById("activity-log-list");
+const activityLogBadge = document.getElementById("activity-log-count-badge");
+
+function updateActivityLogBadge() {
+  const count = Object.keys(todayAuditLogs).length;
+  if (!activityLogBadge) return;
+  if (count > 0) {
+    activityLogBadge.textContent = count > 99 ? "99+" : count;
+    activityLogBadge.classList.remove("hidden");
+  } else {
+    activityLogBadge.classList.add("hidden");
+  }
+}
+
+function renderActivityLogList() {
+  if (!activityLogList) return;
+  const entries = Object.entries(todayAuditLogs).map(([key, item]) => ({ ...item, key }));
+
+  if (entries.length === 0) {
+    activityLogList.innerHTML = '<p class="text-xs text-neutral-500 text-center py-8">No activity logged yet today.</p>';
+    return;
+  }
+
+  entries.sort((a, b) => (b.timestamp || "").localeCompare(a.timestamp || ""));
+
+  let filtered = entries;
+  if (currentAuditFilter !== "all") {
+    filtered = filtered.filter(item => {
+      if (currentAuditFilter === "VOLUNTEER") return item.action.includes("VOLUNTEER");
+      return item.action.includes(currentAuditFilter);
+    });
+  }
+
+  if (filtered.length === 0) {
+    activityLogList.innerHTML = '<p class="text-xs text-neutral-500 text-center py-6">No matching actions found for this filter.</p>';
+    return;
+  }
+
+  activityLogList.innerHTML = filtered.map(item => {
+    const timeStr = item.timestamp ? new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : "—";
+    let badgeColor = "bg-neutral-800 text-neutral-300 border-neutral-700";
+    let icon = "info";
+
+    if (item.action.includes("FORCE_TIMEOUT")) {
+      badgeColor = "bg-red-500/15 text-red-400 border-red-500/30";
+      icon = "logout";
+    } else if (item.action.includes("TIME_EDIT")) {
+      badgeColor = "bg-amber-500/15 text-amber-400 border-amber-500/30";
+      icon = "schedule";
+    } else if (item.action.includes("COMMS")) {
+      badgeColor = "bg-sky-500/15 text-sky-400 border-sky-500/30";
+      icon = "headset_mic";
+    } else if (item.action.includes("BACKUP") || item.action.includes("SYNC")) {
+      badgeColor = "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
+      icon = "cloud_done";
+    } else if (item.action.includes("VOLUNTEER")) {
+      badgeColor = "bg-violet-500/15 text-violet-400 border-violet-500/30";
+      icon = "person";
+    }
+
+    return `
+      <div class="py-2.5 flex items-start gap-3">
+        <div class="p-1.5 rounded-lg border ${badgeColor} flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span class="material-icons-round text-sm">${icon}</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between gap-2 mb-0.5">
+            <span class="text-xs font-bold text-white truncate">${item.action}</span>
+            <span class="text-[10px] text-neutral-500 font-mono flex-shrink-0">${timeStr}</span>
+          </div>
+          <p class="text-xs text-neutral-400 leading-relaxed">${escapeHtml(item.details || '')}</p>
+          <span class="text-[10px] text-neutral-600 font-mono">By: ${escapeHtml(item.user || 'Admin')}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+document.getElementById("activity-log-btn")?.addEventListener("click", () => {
+  renderActivityLogList();
+  activityLogModal.classList.remove("hidden");
+});
+
+document.getElementById("activity-log-close")?.addEventListener("click", () => activityLogModal.classList.add("hidden"));
+document.getElementById("activity-log-clear-btn")?.addEventListener("click", () => {
+  todayAuditLogs = {};
+  renderActivityLogList();
+  updateActivityLogBadge();
+});
+
+document.querySelectorAll(".audit-filter-pill").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".audit-filter-pill").forEach(b => {
+      b.className = "audit-filter-pill px-2.5 py-1 rounded-md text-xs font-medium transition text-neutral-400 hover:text-white";
+    });
+    btn.className = "audit-filter-pill px-2.5 py-1 rounded-md text-xs font-medium transition bg-white text-neutral-950 font-bold";
+    currentAuditFilter = btn.dataset.filter;
+    renderActivityLogList();
+  });
+});
+
+// Audit Log Firebase Listener
+db.ref(`auditLogs/${todayDate}`).on("value", (snap) => {
+  todayAuditLogs = snap.val() || {};
+  renderActivityLogList();
+  updateActivityLogBadge();
+});
+
+// =============================
+// Backup & Snapshot Modal Logic
+// =============================
+const backupModal = document.getElementById("backup-modal");
+
+document.getElementById("backup-menu-btn")?.addEventListener("click", () => {
+  const summaryEl = document.getElementById("backup-status-summary");
+  if (summaryEl) {
+    summaryEl.textContent = `Ready (${allVolunteers.length} volunteers, ${Object.keys(allLogs).length} logs today)`;
+  }
+  backupModal.classList.remove("hidden");
+});
+
+document.getElementById("backup-modal-close")?.addEventListener("click", () => backupModal.classList.add("hidden"));
+document.getElementById("backup-modal-done-btn")?.addEventListener("click", () => backupModal.classList.add("hidden"));
+
+function downloadFullBackupJSON() {
+  try {
+    const backupData = {
+      exportedAt: new Date().toISOString(),
+      date: todayDate,
+      system: "CCF Live Production Volunteer Management",
+      version: "2.0",
+      stats: {
+        totalRegisteredVolunteers: allVolunteers.length,
+        totalTodayLogs: Object.keys(allLogs).length,
+        totalAuditEvents: Object.keys(todayAuditLogs).length
+      },
+      volunteers: allVolunteers,
+      todayLogs: allLogs,
+      commsCondition: commsConditionMap,
+      auditLogs: todayAuditLogs
+    };
+
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `vm_backup_${todayDate}_${Date.now()}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    logAuditEvent("BACKUP_DOWNLOAD", `Exported full offline JSON snapshot (${allVolunteers.length} volunteers, ${Object.keys(allLogs).length} logs)`, "backup");
+    showToast("Full backup downloaded", "download_done", "text-sky-400");
+    playTone("checkin");
+  } catch (err) {
+    console.error("Backup download error:", err);
+    showToast("Backup download failed", "error", "text-red-400");
+  }
+}
+
+async function triggerDailyBackup(isAuto = false) {
+  try {
+    const btn = document.getElementById("trigger-sheets-snapshot-btn");
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add("opacity-50");
+    }
+
+    const logsSnap = await db.ref("logs").once("value");
+    const allDates = logsSnap.val() || {};
+    const allLogEntries = [];
+
+    Object.entries(allDates).forEach(([date, dateLogs]) => {
+      Object.entries(dateLogs).forEach(([key, log]) => {
+        if (log.status === "pending") return;
+        allLogEntries.push({
+          key,
+          date,
+          volunteerId: log.volunteerId || "",
+          name: log.name || "",
+          segment: log.segment || "",
+          role: log.role || "",
+          commsId: log.commsId || "",
+          numberedId: log.numberedId || "",
+          timeIn: log.timeIn || "",
+          timeOut: log.timeOut || "",
+        });
+      });
+    });
+
+    await fetch(SHEETS_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        action: "bulkSync",
+        backupSnapshot: true,
+        date: todayDate,
+        logs: allLogEntries
+      }),
+    });
+
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const lastTimeEl = document.getElementById("backup-last-time");
+    if (lastTimeEl) lastTimeEl.textContent = `Last Cloud Backup: Today at ${timeStr}`;
+
+    const summaryEl = document.getElementById("backup-status-summary");
+    if (summaryEl) summaryEl.textContent = `Snapshot stored (${allLogEntries.length} records)`;
+
+    logAuditEvent(
+      isAuto ? "AUTO_DAILY_BACKUP" : "MANUAL_DAILY_BACKUP",
+      `Saved daily backup snapshot to Google Sheets with ${allLogEntries.length} records`,
+      "backup"
+    );
+
+    showToast("Daily backup saved to Sheets", "cloud_done", "text-green-400");
+    playTone("checkin");
+
+    if (btn) {
+      btn.disabled = false;
+      btn.classList.remove("opacity-50");
+    }
+  } catch (err) {
+    console.error("Daily backup error:", err);
+    showToast("Backup failed: " + err.message, "error", "text-red-400");
+  }
+}
+
+document.getElementById("download-json-backup-btn")?.addEventListener("click", downloadFullBackupJSON);
+document.getElementById("trigger-sheets-snapshot-btn")?.addEventListener("click", () => triggerDailyBackup(false));

@@ -85,7 +85,7 @@
   </head>
   <body class="bg-neutral-950 min-h-screen flex items-center justify-center p-4" style="font-family:'Inter',sans-serif;">
     <div id="offline-banner" class="hidden bg-red-600 text-white text-center text-xs py-1.5 font-bold tracking-widest uppercase sticky top-0 z-50 shadow-md">You are currently offline. Scans will be saved locally and synced later.</div>
-    <div id="main-card" class="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 md:p-8 overflow-hidden">
+    <div id="main-card" class="relative w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 md:p-8 overflow-hidden">
       <!-- Header with CCF Logo (clickable → back to scan) -->
       <div id="header-home-btn" class="cursor-pointer">
         <div class="flex items-center justify-center mb-2">
@@ -99,6 +99,21 @@
         <p class="text-xs text-center text-neutral-400 font-medium tracking-wide uppercase mb-3">Volunteer Checkpoint</p>
       </div>
       <hr class="border-neutral-100 mb-5 mx-8" />
+
+      <!-- Mode & Sound Bar -->
+      <div class="flex items-center justify-between gap-2 mb-3.5 px-0.5">
+        <div class="inline-flex p-0.5 bg-neutral-100 rounded-lg text-xs font-semibold">
+          <button id="scan-mode-standard" type="button" class="px-2.5 py-1 rounded-md transition duration-150 bg-white text-neutral-900 shadow-sm" title="Standard interactive check-in flow">
+            🎯 Standard
+          </button>
+          <button id="scan-mode-fast" type="button" class="px-2.5 py-1 rounded-md transition duration-150 text-neutral-500 hover:text-neutral-900 flex items-center gap-1" title="Instant hands-free auto time-in/out kiosk mode">
+            ⚡ Fast Scan
+          </button>
+        </div>
+        <button id="scan-sound-toggle" type="button" title="Toggle Sound Feedback (Web Audio)" class="p-1.5 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-600 transition flex items-center justify-center">
+          <span id="scan-sound-icon" class="material-icons-round text-base">volume_up</span>
+        </button>
+      </div>
 
       <!-- Stage 1: QR Scanning -->
       <div id="stage-scan" class="text-center">
@@ -478,6 +493,24 @@
           Start now
         </button>
       </div>
+    </div>
+
+    <!-- Fast-Scan Auto Confirmation Overlay -->
+    <div id="fast-scan-overlay" class="hidden absolute inset-0 bg-neutral-950/95 backdrop-blur-md z-40 flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+      <div id="fast-scan-icon-container" class="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center mb-3.5 shadow-lg shadow-emerald-900/30">
+        <span id="fast-scan-icon" class="material-icons-round text-3xl text-emerald-400">check_circle</span>
+      </div>
+      <span id="fast-scan-badge" class="inline-block text-[11px] font-bold uppercase tracking-wider px-3 py-0.5 rounded-full mb-1.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+        Checked In
+      </span>
+      <h3 id="fast-scan-name" class="text-lg font-bold text-white mb-1 tracking-tight"></h3>
+      <p id="fast-scan-detail" class="text-xs text-neutral-400 mb-5 leading-relaxed max-w-[260px]"></p>
+      <div class="w-48 bg-neutral-800/80 rounded-full h-1.5 overflow-hidden mb-3.5">
+        <div id="fast-scan-progress" class="bg-emerald-400 h-full w-full"></div>
+      </div>
+      <button id="fast-scan-cancel-btn" type="button" class="text-xs text-neutral-400 hover:text-white underline py-1 px-3 transition">
+        Edit details / Standard flow
+      </button>
     </div>
 
     <!-- Loading Overlay -->

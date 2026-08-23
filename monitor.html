@@ -135,6 +135,18 @@
           <span class="material-icons-round text-sm">open_in_new</span>
           <span class="hidden sm:inline">Open Sheets</span>
         </a>
+        <button id="activity-log-btn" class="relative flex items-center gap-1.5 text-xs text-neutral-400 hover:text-amber-400 bg-neutral-900 border border-neutral-800 hover:border-amber-900 rounded-lg px-3 py-2.5 transition duration-150" title="View Administrative Activity Log & Audit Trail">
+          <span class="material-icons-round text-sm">manage_history</span>
+          <span class="hidden sm:inline">Activity Log</span>
+          <span id="activity-log-count-badge" class="hidden absolute -top-1.5 -right-1.5 px-1.5 py-0.2 bg-amber-500 text-neutral-950 font-bold text-[9px] rounded-full"></span>
+        </button>
+        <button id="backup-menu-btn" class="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-violet-400 bg-neutral-900 border border-neutral-800 hover:border-violet-900 rounded-lg px-3 py-2.5 transition duration-150" title="Backup & Export System Records">
+          <span class="material-icons-round text-sm">cloud_sync</span>
+          <span class="hidden sm:inline">Backup</span>
+        </button>
+        <button id="monitor-sound-toggle" class="p-2 text-neutral-400 hover:text-white bg-neutral-900 border border-neutral-800 rounded-lg transition duration-150 flex items-center justify-center" title="Toggle Sound Feedback">
+          <span id="monitor-sound-icon" class="material-icons-round text-base">volume_up</span>
+        </button>
       </div>
 
       <!-- Pending Table -->
@@ -581,6 +593,141 @@
         </div>
         <p id="change-comms-vol-name" class="text-xs text-neutral-500 mb-3"></p>
         <div id="change-comms-list" class="space-y-1 max-h-72 overflow-y-auto pr-1"></div>
+      </div>
+    </div>
+
+    <!-- Comms Condition / Battery Modal -->
+    <div id="comms-condition-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+      <div class="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-fade-in">
+        <div class="px-6 py-4 border-b border-neutral-800 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="material-icons-round text-amber-400 text-lg">headset_mic</span>
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider">Comms Health: <span id="comms-condition-code" class="text-amber-400 font-mono"></span></h3>
+          </div>
+          <button id="comms-condition-close" class="text-neutral-500 hover:text-white p-1 rounded-lg transition">
+            <span class="material-icons-round text-xl">close</span>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Unit Status & Condition</label>
+            <div class="grid grid-cols-2 gap-2" id="comms-status-selector">
+              <button type="button" data-val="ok" class="comms-status-opt flex items-center gap-2 p-2.5 rounded-xl border border-neutral-700 bg-neutral-800/80 text-xs font-semibold text-neutral-200 hover:border-green-500 transition">
+                <span class="material-icons-round text-green-400 text-base">check_circle</span> Good / Normal
+              </button>
+              <button type="button" data-val="low_battery" class="comms-status-opt flex items-center gap-2 p-2.5 rounded-xl border border-neutral-700 bg-neutral-800/80 text-xs font-semibold text-neutral-200 hover:border-amber-500 transition">
+                <span class="material-icons-round text-amber-400 text-base">battery_alert</span> Low Battery
+              </button>
+              <button type="button" data-val="charging" class="comms-status-opt flex items-center gap-2 p-2.5 rounded-xl border border-neutral-700 bg-neutral-800/80 text-xs font-semibold text-neutral-200 hover:border-sky-500 transition">
+                <span class="material-icons-round text-sky-400 text-base">battery_charging_full</span> Charging
+              </button>
+              <button type="button" data-val="faulty" class="comms-status-opt flex items-center gap-2 p-2.5 rounded-xl border border-neutral-700 bg-neutral-800/80 text-xs font-semibold text-neutral-200 hover:border-red-500 transition">
+                <span class="material-icons-round text-red-400 text-base">build</span> In Repair / Faulty
+              </button>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Maintenance Notes</label>
+            <input id="comms-condition-note" type="text" placeholder="e.g. Mic boom loose, replace battery pack..." class="w-full px-3 py-2.5 bg-neutral-800 border border-neutral-700 rounded-xl text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500" />
+          </div>
+          <div id="comms-condition-last-updated" class="text-[11px] text-neutral-500 italic"></div>
+        </div>
+        <div class="px-6 py-3.5 border-t border-neutral-800 bg-neutral-950/50 flex items-center justify-between">
+          <button id="comms-condition-clear" class="text-xs text-neutral-500 hover:text-red-400 transition">Reset to Good</button>
+          <div class="flex items-center gap-2">
+            <button id="comms-condition-cancel" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-neutral-400 hover:text-white bg-neutral-800 transition">Cancel</button>
+            <button id="comms-condition-save" class="px-4 py-1.5 rounded-lg text-xs font-bold text-neutral-950 bg-amber-400 hover:bg-amber-300 transition">Save Condition</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity Log / Audit Trail Modal -->
+    <div id="activity-log-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+      <div class="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-fade-in">
+        <div class="px-6 py-4 border-b border-neutral-800 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+              <span class="material-icons-round text-lg">manage_history</span>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-white uppercase tracking-wider">Audit Trail & Activity Log</h3>
+              <p id="activity-log-subtitle" class="text-xs text-neutral-500">Real-time administrative actions & overrides</p>
+            </div>
+          </div>
+          <button id="activity-log-close" class="text-neutral-500 hover:text-white p-1 rounded-lg transition">
+            <span class="material-icons-round text-xl">close</span>
+          </button>
+        </div>
+        
+        <!-- Filter pills -->
+        <div class="px-6 py-2.5 bg-neutral-950/50 border-b border-neutral-800 flex items-center gap-1.5 overflow-x-auto text-xs">
+          <button class="audit-filter-pill px-2.5 py-1 rounded-md text-xs font-medium transition bg-white text-neutral-950" data-filter="all">All Actions</button>
+          <button class="audit-filter-pill px-2.5 py-1 rounded-md text-xs font-medium transition text-neutral-400 hover:text-white" data-filter="FORCE_TIMEOUT_ALL">Time Out All</button>
+          <button class="audit-filter-pill px-2.5 py-1 rounded-md text-xs font-medium transition text-neutral-400 hover:text-white" data-filter="MANUAL_TIME_EDIT">Time Edits</button>
+          <button class="audit-filter-pill px-2.5 py-1 rounded-md text-xs font-medium transition text-neutral-400 hover:text-white" data-filter="COMMS_OVERRIDE">Comms Overrides</button>
+          <button class="audit-filter-pill px-2.5 py-1 rounded-md text-xs font-medium transition text-neutral-400 hover:text-white" data-filter="COMMS_CONDITION">Comms Health</button>
+          <button class="audit-filter-pill px-2.5 py-1 rounded-md text-xs font-medium transition text-neutral-400 hover:text-white" data-filter="VOLUNTEER">Volunteers</button>
+        </div>
+
+        <!-- Log list container -->
+        <div id="activity-log-list" class="flex-1 overflow-y-auto p-6 space-y-3 divide-y divide-neutral-800/40">
+          <p class="text-xs text-neutral-500 text-center py-8">No activity logged yet today.</p>
+        </div>
+        
+        <div class="px-6 py-3 border-t border-neutral-800 bg-neutral-950/50 flex items-center justify-between text-xs text-neutral-500">
+          <span>Auto-synced with Firebase RTDB</span>
+          <button id="activity-log-clear-btn" class="text-neutral-500 hover:text-red-400 transition text-xs">Clear Local View</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Backup & Snapshot Modal -->
+    <div id="backup-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+      <div class="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-fade-in">
+        <div class="px-6 py-4 border-b border-neutral-800 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="material-icons-round text-violet-400 text-lg">cloud_sync</span>
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider">Backup & System Snapshot</h3>
+          </div>
+          <button id="backup-modal-close" class="text-neutral-500 hover:text-white p-1 rounded-lg transition">
+            <span class="material-icons-round text-xl">close</span>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <div class="p-4 rounded-xl bg-neutral-950/60 border border-neutral-800 space-y-1">
+            <p class="text-xs font-bold text-neutral-200">System State</p>
+            <p id="backup-status-summary" class="text-xs text-neutral-400">Ready to backup</p>
+            <p id="backup-last-time" class="text-[11px] text-neutral-500 font-mono">Last Cloud Backup: None yet today</p>
+          </div>
+
+          <div class="space-y-2">
+            <button id="download-json-backup-btn" class="w-full flex items-center justify-between p-3 rounded-xl bg-neutral-800 hover:bg-neutral-700/80 border border-neutral-700 text-left transition">
+              <div class="flex items-center gap-2.5">
+                <span class="material-icons-round text-sky-400 text-xl">download</span>
+                <div>
+                  <p class="text-xs font-bold text-white">Download Full JSON Backup</p>
+                  <p class="text-[11px] text-neutral-400">Complete timestamped snapshot of logs, comms, & volunteers</p>
+                </div>
+              </div>
+              <span class="material-icons-round text-neutral-500 text-sm">chevron_right</span>
+            </button>
+
+            <button id="trigger-sheets-snapshot-btn" class="w-full flex items-center justify-between p-3 rounded-xl bg-neutral-800 hover:bg-neutral-700/80 border border-neutral-700 text-left transition">
+              <div class="flex items-center gap-2.5">
+                <span class="material-icons-round text-green-400 text-xl">table_chart</span>
+                <div>
+                  <p class="text-xs font-bold text-white">Snapshot to Google Sheets</p>
+                  <p class="text-[11px] text-neutral-400">Sync all records & audit trail to connected spreadsheet</p>
+                </div>
+              </div>
+              <span class="material-icons-round text-neutral-500 text-sm">chevron_right</span>
+            </button>
+          </div>
+        </div>
+        <div class="px-6 py-3 border-t border-neutral-800 bg-neutral-950/50 flex justify-end">
+          <button id="backup-modal-done-btn" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-neutral-300 hover:text-white bg-neutral-800 transition">Close</button>
+        </div>
       </div>
     </div>
 
