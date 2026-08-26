@@ -1587,7 +1587,7 @@ if (document.getElementById("timeout-self-cancel-btn")) {
     if (pendingTimeOutListener) { pendingTimeOutListener.off(); pendingTimeOutListener = null; }
 
     try {
-      await db.ref(`logs/${date}/${logKey}`).update({ status: null });
+      await executeOrQueueWrite(`logs/${date}/${logKey}`, { status: null }, "update");
     } catch (e) {
       console.error("Failed to cancel time-out:", e);
     }
@@ -2004,13 +2004,13 @@ if (document.getElementById("reset-scan-btn")) {
       // Auto-register new volunteer with selected segments
       const team = [...quickSelectedSegs].join(", ");
       const newId = `VOL-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-      await db.ref(`volunteers/${newId}`).set({
+      await executeOrQueueWrite(`volunteers/${newId}`, {
         name: name,
         type: "volunteer",
         team: team || null,
         contact: null,
         registeredAt: new Date().toISOString(),
-      });
+      }, "set");
       // Add to local list
       allVols.push({ id: newId, name, type: "volunteer" });
       // Proceed
@@ -2350,10 +2350,10 @@ if (document.getElementById("guest-form")) {
     const newId = `GUEST-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
     try {
-      await db.ref(`volunteers/${newId}`).set({
+      await executeOrQueueWrite(`volunteers/${newId}`, {
         name, type: "guest", registeredAt: new Date().toISOString(),
         ...(contact ? { contact } : {}),
-      });
+      }, "set");
 
       document.getElementById("guest-qr-name").textContent = name;
       document.getElementById("guest-qr-id").textContent = `ID: ${newId}`;
@@ -2448,7 +2448,7 @@ if (document.getElementById("search-user-input")) {
 
 
 // =============================
-// PWA & Offline Sync Logic
+// True PWA & Firebase Offline Queue
 // =============================
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -2463,83 +2463,69 @@ function updateOnlineStatus() {
   if (banner) {
     if (navigator.onLine) {
       banner.classList.add('hidden');
-      flushOfflineScans();
+      syncOfflineQueue();
     } else {
       banner.classList.remove('hidden');
+      banner.textContent = "Offline Mode: Active. Scans will sync automatically.";
     }
   }
 }
+
 window.addEventListener('online', updateOnlineStatus);
 window.addEventListener('offline', updateOnlineStatus);
-updateOnlineStatus();
+setTimeout(updateOnlineStatus, 1000);
 
-// Simple IndexedDB wrapper for offline scans
-const DB_NAME = 'vm-offline-db';
-const STORE_NAME = 'scans';
-
-function getOfflineDB() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
-    request.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE_NAME, { autoIncrement: true });
-    request.onsuccess = (e) => resolve(e.target.result);
-    request.onerror = (e) => reject(e);
-  });
-}
-
-async function saveScanOffline(scanData) {
-  const db = await getOfflineDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).add(scanData);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject();
-  });
-}
-
-async function flushOfflineScans() {
-  const db_instance = await getOfflineDB();
-  const tx = db_instance.transaction(STORE_NAME, 'readonly');
-  const store = tx.objectStore(STORE_NAME);
-  const req = store.getAll();
-  
-  req.onsuccess = async () => {
-    const scans = req.result;
-    if (scans && scans.length > 0) {
-      showToast(`Syncing ${scans.length} offline scan(s)...`, "sync", "text-sky-400");
-      let syncedCount = 0;
-      for (const scan of scans) {
-         try {
-           // Push raw offline scan to a special queue in Firebase for admins to process, 
-           // or process it directly if we have enough data.
-           await db.ref('offlineQueue').push(scan);
-           syncedCount++;
-         } catch(e) {
-           console.error("Failed to sync offline scan", e);
-         }
-      }
-      
-      if (syncedCount > 0) {
-        // Clear store
-        const clearTx = db_instance.transaction(STORE_NAME, 'readwrite');
-        clearTx.objectStore(STORE_NAME).clear();
-        showToast("Offline scans synced successfully!", "cloud_done", "text-green-400");
-      }
-    }
-  };
-}
-
-// Hook into handleVolunteerScan for offline fallback
-const originalHandleScan = handleVolunteerScan;
-handleVolunteerScan = async function(id) {
+// Unified Firebase Queueing Wrapper
+function executeOrQueueWrite(refPath, data, operation = "set") {
   if (!navigator.onLine) {
-    if (typeof playTone === "function") playTone("success");
-    await saveScanOffline({ id, timestamp: Date.now(), type: 'raw_scan' });
-    showStage('qr-result');
-    document.getElementById('result-message').innerHTML = `<span class="text-amber-400 font-bold">OFFLINE MODE</span><br>Scan saved locally. It will sync automatically when internet is restored.`;
-    document.getElementById('result-icon').textContent = "cloud_off";
-    document.getElementById('result-icon').className = "material-icons-round text-amber-400 text-6xl mb-4";
-    setTimeout(startQrScanner, 4000);
-    return;
+    // Queue locally
+    let queue = JSON.parse(localStorage.getItem('vm_offline_queue') || '[]');
+    queue.push({
+      path: refPath,
+      data: data,
+      op: operation,
+      timestamp: new Date().toISOString()
+    });
+    localStorage.setItem('vm_offline_queue', JSON.stringify(queue));
+    console.log(`[Offline] Queued ${operation} to ${refPath}`);
+    return Promise.resolve(true); // Pretend success
+  } else {
+    // Execute live
+    if (operation === "set") return db.ref(refPath).set(data);
+    if (operation === "update") return db.ref(refPath).update(data);
+    if (operation === "push") return db.ref(refPath).push(data);
+    if (operation === "remove") return db.ref(refPath).remove();
   }
-  return originalHandleScan(id);
-};
+}
+
+async function syncOfflineQueue() {
+  let queue = JSON.parse(localStorage.getItem('vm_offline_queue') || '[]');
+  if (queue.length === 0) return;
+
+  const toastDiv = document.createElement("div");
+  toastDiv.className = "fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] bg-sky-500 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg flex items-center gap-2 animate-fade-in";
+  toastDiv.innerHTML = `<span class="material-icons-round text-sm animate-spin">sync</span> Syncing ${queue.length} offline actions...`;
+  document.body.appendChild(toastDiv);
+
+  let successCount = 0;
+  for (const item of queue) {
+    try {
+      if (item.op === "set") await db.ref(item.path).set(item.data);
+      else if (item.op === "update") await db.ref(item.path).update(item.data);
+      else if (item.op === "push") await db.ref(item.path).push(item.data);
+      else if (item.op === "remove") await db.ref(item.path).remove();
+      successCount++;
+    } catch(e) {
+      console.error("Failed to sync queued item:", item, e);
+    }
+  }
+
+  // Clear queue
+  localStorage.setItem('vm_offline_queue', '[]');
+  
+  toastDiv.innerHTML = `<span class="material-icons-round text-sm">cloud_done</span> Synced ${successCount} actions.`;
+  toastDiv.className = "fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] bg-green-500 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg flex items-center gap-2";
+  
+  setTimeout(() => toastDiv.remove(), 3000);
+}
+

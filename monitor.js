@@ -3482,3 +3482,179 @@ async function triggerDailyBackup(isAuto = false) {
 
 document.getElementById("download-json-backup-btn")?.addEventListener("click", downloadFullBackupJSON);
 document.getElementById("trigger-sheets-snapshot-btn")?.addEventListener("click", () => triggerDailyBackup(false));
+
+
+// =============================
+// Data Analytics Dashboard (Chart.js)
+// =============================
+const analyticsView = document.getElementById("analytics-view");
+let chartArrivals, chartSegments, chartComms;
+
+document.getElementById("toggle-analytics-btn")?.addEventListener("click", () => {
+  document.querySelector(".max-w-5xl").classList.add("hidden"); // Hide Monitor Grid
+  document.getElementById("volunteers-view").classList.add("hidden"); // Hide Directory
+  analyticsView.classList.remove("hidden");
+  renderAnalytics();
+});
+
+document.getElementById("back-to-monitor-from-analytics")?.addEventListener("click", () => {
+  analyticsView.classList.add("hidden");
+  document.querySelector(".max-w-5xl").classList.remove("hidden");
+});
+
+function renderAnalytics() {
+  if (!window.Chart) {
+    console.warn("Chart.js not loaded.");
+    return;
+  }
+
+  // 1. Process Peak Arrivals Data
+  const arrivalCounts = {}; // hour -> count
+  Object.values(allLogs).forEach(log => {
+    if (log.timeIn && log.status !== "pending") {
+      const hour = new Date(log.timeIn).getHours();
+      const label = hour < 12 ? `${hour}AM` : hour === 12 ? "12PM" : `${hour - 12}PM`;
+      arrivalCounts[label] = (arrivalCounts[label] || 0) + 1;
+    }
+  });
+
+  // Sort hours chronologically (roughly starting from early morning)
+  const hourOrder = ["6AM","7AM","8AM","9AM","10AM","11AM","12PM","1PM","2PM","3PM","4PM","5PM","6PM","7PM","8PM","9PM","10PM"];
+  const arrivalLabels = [];
+  const arrivalData = [];
+  hourOrder.forEach(h => {
+    if (arrivalCounts[h] !== undefined) {
+      arrivalLabels.push(h);
+      arrivalData.push(arrivalCounts[h]);
+    }
+  });
+
+  if (chartArrivals) chartArrivals.destroy();
+  const ctxArr = document.getElementById("chart-arrivals");
+  if (ctxArr) {
+    chartArrivals = new Chart(ctxArr, {
+      type: "line",
+      data: {
+        labels: arrivalLabels,
+        datasets: [{
+          label: "Check-ins",
+          data: arrivalData,
+          borderColor: "#38bdf8", // sky-400
+          backgroundColor: "rgba(56, 189, 248, 0.2)",
+          borderWidth: 3,
+          tension: 0.3,
+          fill: true,
+          pointBackgroundColor: "#fff",
+          pointBorderColor: "#38bdf8",
+          pointRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { mode: 'index', intersect: false }
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { stepSize: 1, color: "#737373" }, grid: { color: "#262626" } },
+          x: { ticks: { color: "#737373" }, grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  // 2. Process Segment Distribution Data
+  const segmentCounts = {};
+  Object.values(allLogs).forEach(log => {
+    if (log.status !== "pending") {
+      let seg = log.segment || "Unassigned";
+      // Merge variations if needed, but fallback is just using the string
+      segmentCounts[seg] = (segmentCounts[seg] || 0) + 1;
+    }
+  });
+
+  const segLabels = Object.keys(segmentCounts).sort((a,b) => segmentCounts[b] - segmentCounts[a]);
+  const segData = segLabels.map(l => segmentCounts[l]);
+
+  if (chartSegments) chartSegments.destroy();
+  const ctxSeg = document.getElementById("chart-segments");
+  if (ctxSeg) {
+    chartSegments = new Chart(ctxSeg, {
+      type: "bar",
+      data: {
+        labels: segLabels,
+        datasets: [{
+          label: "Volunteers",
+          data: segData,
+          backgroundColor: "#a78bfa", // violet-400
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { stepSize: 1, color: "#737373" }, grid: { color: "#262626" } },
+          x: { ticks: { color: "#a3a3a3", maxRotation: 45, minRotation: 45 }, grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  // 3. Process Comms Health Data
+  let lowCount = 0, repairCount = 0, chargeCount = 0, goodCount = 0;
+  
+  // Base it on all registered comms, defaulting to good if not in condition map
+  allComms.forEach(c => {
+    const cond = commsConditionMap[c.code] || { status: "ok" };
+    if (cond.status === "low_battery") lowCount++;
+    else if (cond.status === "faulty") repairCount++;
+    else if (cond.status === "charging") chargeCount++;
+    else goodCount++;
+  });
+
+  if (chartComms) chartComms.destroy();
+  const ctxComms = document.getElementById("chart-comms");
+  if (ctxComms) {
+    chartComms = new Chart(ctxComms, {
+      type: "doughnut",
+      data: {
+        labels: ["Good / Normal", "Low Battery", "Charging", "In Repair"],
+        datasets: [{
+          data: [goodCount, lowCount, chargeCount, repairCount],
+          backgroundColor: [
+            "#34d399", // green-400
+            "#fbbf24", // amber-400
+            "#38bdf8", // sky-400
+            "#f87171"  // red-400
+          ],
+          borderWidth: 0,
+          hoverOffset: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: "65%",
+        plugins: {
+          legend: { 
+            position: "bottom",
+            labels: { color: "#a3a3a3", padding: 20, usePointStyle: true }
+          }
+        }
+      }
+    });
+  }
+}
+
+// Re-render charts when data changes if analytics view is active
+db.ref(logsPath).on("value", () => {
+  if (!analyticsView.classList.contains("hidden")) renderAnalytics();
+});
+db.ref("commsCondition").on("value", () => {
+  if (!analyticsView.classList.contains("hidden")) renderAnalytics();
+});
