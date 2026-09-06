@@ -472,15 +472,12 @@ function renderTable() {
       `;
       row.appendChild(segIdTd);
 
-      // Access ID input + confirm button
+      // Access ID input
       const accessIdTd = document.createElement("td");
       accessIdTd.className = "px-4 py-2 text-sm";
       accessIdTd.innerHTML = `
         <div class="flex items-center gap-1">
           <input type="text" placeholder="ID" data-key="${log.key}" class="pending-accessid-input w-20 px-2 py-1.5 bg-neutral-800 border border-neutral-700 rounded text-center text-white text-xs font-mono focus:outline-none focus:border-amber-400" />
-          <button class="pending-confirm-btn flex items-center justify-center w-6 h-6 rounded-md bg-green-600 hover:bg-green-500 text-white transition duration-150" data-key="${log.key}" data-comms="${log.commsId || ""}" data-volunteer="${log.volunteerId || ""}" data-time="${log.timeIn || ""}" data-name="${log.name || ""}" data-segment="${log.segment || ""}" data-role="${log.role || ""}" title="Confirm time-in">
-            <span class="material-icons-round text-sm">check</span>
-          </button>
         </div>
       `;
       row.appendChild(accessIdTd);
@@ -499,10 +496,19 @@ function renderTable() {
         td(`<span class="font-mono text-amber-400 text-xs">${formatTime(log.timeIn)}</span>`)
       );
 
-      // Cancel button
+      // Action buttons (Confirm + Cancel)
       const actionTd = document.createElement("td");
       actionTd.className = "px-4 py-2 text-sm";
-      actionTd.innerHTML = `<button class="pending-cancel-btn text-neutral-500 hover:text-red-400 transition text-xs flex items-center gap-1" data-key="${log.key}"><span class="material-icons-round text-base">close</span>Cancel</button>`;
+      actionTd.innerHTML = `
+        <div class="flex items-center gap-2">
+          <button class="pending-confirm-btn flex items-center justify-center w-6 h-6 rounded-md bg-green-600 hover:bg-green-500 text-white transition duration-150" data-key="${log.key}" data-comms="${log.commsId || ""}" data-volunteer="${log.volunteerId || ""}" data-time="${log.timeIn || ""}" data-name="${log.name || ""}" data-segment="${log.segment || ""}" data-role="${log.role || ""}" title="Confirm time-in">
+            <span class="material-icons-round text-sm">check</span>
+          </button>
+          <button class="pending-cancel-btn text-neutral-500 hover:text-red-400 transition text-xs flex items-center gap-1" data-key="${log.key}">
+            <span class="material-icons-round text-base">close</span>Cancel
+          </button>
+        </div>
+      `;
       row.appendChild(actionTd);
 
       pendingBody.appendChild(row);
