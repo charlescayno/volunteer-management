@@ -590,6 +590,27 @@ function renderTable() {
           return;
         }
 
+        // Validation for Access ID
+        if (accessId) {
+          const duplicateAccess = Object.entries(allLogs).find(([lKey, log]) => {
+            if (lKey === key) return false;
+            if (log.timeOut) return false;
+            if (log.status === "pending") return false;
+            if ((log.segment || "").trim().toLowerCase() !== segmentName.trim().toLowerCase()) return false;
+            return (log.accessId || "").toString().trim() === accessId;
+          });
+
+          if (duplicateAccess) {
+            const dupLog = duplicateAccess[1];
+            showToast(`Access ID ${accessId} is already in use by ${dupLog.name || 'another volunteer'} in ${segmentName}`, "error", "text-red-400");
+            if (accessIdInput) {
+              accessIdInput.classList.add("border-red-500");
+              accessIdInput.focus();
+            }
+            return;
+          }
+        }
+
         if (segIdInput) segIdInput.classList.remove("border-red-500");
         if (accessIdInput) accessIdInput.classList.remove("border-red-500");
 
