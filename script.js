@@ -1095,12 +1095,13 @@ async function selectSegment(segment) {
     ? [...regularRoles, ...leaderRoles]
     : [...regularRoles, ...leaderRoles, volunteerRole];
 
-  // Sort: roles with comms codes first, "(Volunteer)" catch-all last
+  // Sort: generic "(Volunteer)" first, then comms roles, then the rest
   allRoles.sort((a, b) => {
     const aIsVol = a.endsWith("(Volunteer)");
     const bIsVol = b.endsWith("(Volunteer)");
-    if (aIsVol && !bIsVol) return 1;
-    if (!aIsVol && bIsVol) return -1;
+    if (aIsVol && !bIsVol) return -1; // generic volunteer role goes top
+    if (!aIsVol && bIsVol) return 1;
+
     const aHasComms = !!roleToComms[a];
     const bHasComms = !!roleToComms[b];
     if (aHasComms && !bHasComms) return -1;
