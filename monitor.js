@@ -477,7 +477,7 @@ function renderTable() {
       accessIdTd.className = "px-4 py-2 text-sm";
       accessIdTd.innerHTML = `
         <div class="flex items-center gap-1">
-          <input type="text" placeholder="ID" data-key="${log.key}" class="pending-accessid-input w-20 px-2 py-1.5 bg-neutral-800 border border-neutral-700 rounded text-center text-white text-xs font-mono focus:outline-none focus:border-amber-400" />
+          <input type="text" placeholder="#" data-key="${log.key}" class="pending-accessid-input w-20 px-2 py-1.5 bg-neutral-800 border border-neutral-700 rounded text-center text-white text-xs font-mono focus:outline-none focus:border-amber-400" />
         </div>
       `;
       row.appendChild(accessIdTd);
