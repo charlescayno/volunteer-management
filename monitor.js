@@ -462,18 +462,28 @@ function renderTable() {
       }
       row.appendChild(pendingCommsTd);
 
-      // Seg ID input + confirm button
+      // Seg ID input
       const segIdTd = document.createElement("td");
       segIdTd.className = "px-4 py-2 text-sm";
       segIdTd.innerHTML = `
         <div class="flex items-center gap-1">
           <input type="text" placeholder="#" data-key="${log.key}" class="pending-segid-input w-16 px-2 py-1.5 bg-neutral-800 border border-neutral-700 rounded text-center text-white text-xs font-mono focus:outline-none focus:border-amber-400" />
-          <button class="pending-confirm-btn flex items-center justify-center w-6 h-6 rounded-md bg-neutral-700 text-neutral-500 cursor-not-allowed transition duration-150 disabled" disabled data-key="${log.key}" data-comms="${log.commsId || ""}" data-volunteer="${log.volunteerId || ""}" data-time="${log.timeIn || ""}" data-name="${log.name || ""}" data-segment="${log.segment || ""}" data-role="${log.role || ""}" title="Enter Seg ID first">
+        </div>
+      `;
+      row.appendChild(segIdTd);
+
+      // Access ID input + confirm button
+      const accessIdTd = document.createElement("td");
+      accessIdTd.className = "px-4 py-2 text-sm";
+      accessIdTd.innerHTML = `
+        <div class="flex items-center gap-1">
+          <input type="text" placeholder="ID" data-key="${log.key}" class="pending-accessid-input w-20 px-2 py-1.5 bg-neutral-800 border border-neutral-700 rounded text-center text-white text-xs font-mono focus:outline-none focus:border-amber-400" />
+          <button class="pending-confirm-btn flex items-center justify-center w-6 h-6 rounded-md bg-green-600 hover:bg-green-500 text-white transition duration-150" data-key="${log.key}" data-comms="${log.commsId || ""}" data-volunteer="${log.volunteerId || ""}" data-time="${log.timeIn || ""}" data-name="${log.name || ""}" data-segment="${log.segment || ""}" data-role="${log.role || ""}" title="Confirm time-in">
             <span class="material-icons-round text-sm">check</span>
           </button>
         </div>
       `;
-      row.appendChild(segIdTd);
+      row.appendChild(accessIdTd);
 
       // No ID toggle
       const noIdTd = document.createElement("td");
@@ -517,7 +527,7 @@ function renderTable() {
       );
     });
 
-    // Attach confirm handlers (check button beside seg ID)
+    // Attach confirm handlers
     document.querySelectorAll(".pending-confirm-btn").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const key = btn.dataset.key;
@@ -525,8 +535,11 @@ function renderTable() {
         const volunteerId = btn.dataset.volunteer;
         const timeIn = btn.dataset.time;
         const segmentName = btn.dataset.segment || "";
-        const segIdInput = btn.closest("div").querySelector(".pending-segid-input");
+        const row = btn.closest("tr");
+        const segIdInput = row.querySelector(".pending-segid-input");
+        const accessIdInput = row.querySelector(".pending-accessid-input");
         const numberedId = segIdInput ? segIdInput.value.trim() : "";
+        const accessId = accessIdInput ? accessIdInput.value.trim() : "";
 
         // Check if "No ID" toggle is active for this entry
         const noIdToggle = document.querySelector(`.pending-noid-toggle[data-key="${key}"]`);
@@ -562,16 +575,17 @@ function renderTable() {
             }
             return;
           }
-        } else if (!noId) {
-          showToast("Please enter a Seg ID (1-50) or toggle 'No ID'", "warning", "text-amber-400");
-          if (segIdInput) {
-            segIdInput.classList.add("border-red-500");
-            segIdInput.focus();
-          }
+        }
+        
+        if (!numberedId && !accessId && !noId) {
+          showToast("Please enter Seg ID, Access ID, or toggle 'No ID'", "warning", "text-amber-400");
+          if (segIdInput) segIdInput.classList.add("border-red-500");
+          if (accessIdInput) accessIdInput.classList.add("border-red-500");
           return;
         }
 
         if (segIdInput) segIdInput.classList.remove("border-red-500");
+        if (accessIdInput) accessIdInput.classList.remove("border-red-500");
 
         // Capture whether comms is already held by a different confirmed volunteer
         const commsAlreadyTaken = commsCode &&
@@ -582,6 +596,7 @@ function renderTable() {
           // 1. Upgrade pending record to confirmed
           await db.ref(`logs/${todayDate}/${key}`).update({
             numberedId: numberedId || null,
+            accessId: accessId || null,
             noId: noId || null,
             status: null, // Remove pending flag — now confirmed
           });
@@ -605,6 +620,7 @@ function renderTable() {
             role: btn.dataset.role,
             commsId: commsCode || 'NONE',
             numberedId: numberedId,
+            accessId: accessId,
             timeIn: timeIn,
             date: todayDate,
           });
@@ -617,27 +633,15 @@ function renderTable() {
       });
     });
 
-    // Enable/disable confirm button based on seg ID input
-    document.querySelectorAll(".pending-segid-input").forEach((input) => {
-      const confirmBtn = input.closest("div").querySelector(".pending-confirm-btn");
-      input.addEventListener("input", () => {
-        input.classList.remove("border-red-500");
-        const hasValue = input.value.trim().length > 0;
-        if (confirmBtn) {
-          confirmBtn.disabled = !hasValue;
-          if (hasValue) {
-            confirmBtn.className = "pending-confirm-btn flex items-center justify-center w-6 h-6 rounded-md bg-green-600 hover:bg-green-500 text-white transition duration-150";
-            confirmBtn.title = "Confirm time-in";
-          } else {
-            confirmBtn.className = "pending-confirm-btn flex items-center justify-center w-6 h-6 rounded-md bg-neutral-700 text-neutral-500 cursor-not-allowed transition duration-150";
-            confirmBtn.title = "Enter Seg ID first";
-          }
-        }
-      });
+    // Clear error styling on input and handle enter key
+    document.querySelectorAll(".pending-segid-input, .pending-accessid-input").forEach((input) => {
+      input.addEventListener("input", () => input.classList.remove("border-red-500"));
       input.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
           e.preventDefault();
-          if (confirmBtn && !confirmBtn.disabled) confirmBtn.click();
+          const row = input.closest("tr");
+          const confirmBtn = row.querySelector(".pending-confirm-btn");
+          if (confirmBtn) confirmBtn.click();
         }
       });
     });
@@ -916,6 +920,9 @@ function renderTable() {
     row.appendChild(
       td(log.numberedId ? `<span class="font-mono font-bold text-white">#${log.numberedId}</span>` : '<span class="text-neutral-600">—</span>')
     );
+    row.appendChild(
+      td(log.accessId ? `<span class="font-mono font-bold text-white">${log.accessId}</span>` : '<span class="text-neutral-600">—</span>')
+    );
 
     // ID status
     const idStatusTd = document.createElement("td");
@@ -984,6 +991,9 @@ function renderTable() {
     row.appendChild(commsButton(log.commsId));
     row.appendChild(
       td(log.numberedId ? `<span class="font-mono text-neutral-400">#${log.numberedId}</span>` : '<span class="text-neutral-700">—</span>')
+    );
+    row.appendChild(
+      td(log.accessId ? `<span class="font-mono text-neutral-400">${log.accessId}</span>` : '<span class="text-neutral-700">—</span>')
     );
     row.appendChild(
       td(`<span class="font-mono text-neutral-500">${formatTime(log.timeIn)}</span>`)
