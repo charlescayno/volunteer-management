@@ -581,12 +581,12 @@ function renderTable() {
             }
             return;
           }
-        }
-        
-        if (!numberedId && !accessId && !noId) {
-          showToast("Please enter Seg ID, Access ID, or toggle 'No ID'", "warning", "text-amber-400");
-          if (segIdInput) segIdInput.classList.add("border-red-500");
-          if (accessIdInput) accessIdInput.classList.add("border-red-500");
+        } else if (!noId) {
+          showToast("Please enter a Seg ID (1-50) or toggle 'No ID'", "warning", "text-amber-400");
+          if (segIdInput) {
+            segIdInput.classList.add("border-red-500");
+            segIdInput.focus();
+          }
           return;
         }
 
