@@ -3136,7 +3136,7 @@ document.getElementById("force-timeout-all-btn")?.addEventListener("click", asyn
     return;
   }
   
-  if (!confirm(`Are you sure you want to force time-out all ${activeLogs.length} active volunteers?`)) return;
+  if (!confirm(`End of Day Auto-Checkout:\n\nAre you sure you want to automatically time-out all ${activeLogs.length} active volunteers?`)) return;
 
   const now = new Date().toISOString();
   showToast(`Timing out ${activeLogs.length} volunteers...`, "hourglass_top", "text-amber-400");
