@@ -3539,6 +3539,15 @@ document.getElementById("back-to-monitor-from-analytics")?.addEventListener("cli
   document.querySelector(".max-w-5xl").classList.remove("hidden");
 });
 
+// FAQ Modal Logic
+const faqModal = document.getElementById("faq-modal");
+document.getElementById("toggle-faq-btn")?.addEventListener("click", () => {
+  faqModal.classList.remove("hidden");
+});
+document.getElementById("faq-close-btn")?.addEventListener("click", () => {
+  faqModal.classList.add("hidden");
+});
+
 function renderAnalytics() {
   if (!window.Chart) {
     console.warn("Chart.js not loaded.");
