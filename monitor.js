@@ -3483,6 +3483,8 @@ async function triggerDailyBackup(isAuto = false) {
     const allDates = logsSnap.val() || {};
     const allLogEntries = [];
 
+    const fmtTime = (ts) => ts ? new Date(ts).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", hour12: true }) : "";
+
     Object.entries(allDates).forEach(([date, dateLogs]) => {
       Object.entries(dateLogs).forEach(([key, log]) => {
         if (log.status === "pending") return;
@@ -3495,8 +3497,8 @@ async function triggerDailyBackup(isAuto = false) {
           role: log.role || "",
           commsId: log.commsId || "",
           numberedId: log.numberedId || "",
-          timeIn: log.timeIn || "",
-          timeOut: log.timeOut || "",
+          timeIn: fmtTime(log.timeIn),
+          timeOut: fmtTime(log.timeOut),
         });
       });
     });
