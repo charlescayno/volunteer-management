@@ -1,4 +1,4 @@
-const CACHE_NAME = "vm-cache-v17";
+const CACHE_NAME = "vm-cache-v18";
 const STATIC_ASSETS = [
   "./",
   "./index.html",

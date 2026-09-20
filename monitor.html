@@ -73,6 +73,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <!-- SheetJS for XLSX export -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   </head>
   <body class="bg-neutral-950 min-h-screen p-4 md:p-6" style="font-family:'Inter',sans-serif;">
     <div id="offline-banner" class="hidden bg-red-600 text-white text-center text-xs py-1.5 font-bold tracking-widest uppercase sticky top-0 z-50 shadow-md">You are currently offline. Scans will be saved locally and synced later.</div>
@@ -139,10 +141,10 @@
           <span class="material-icons-round text-sm">sync</span>
           <span id="sync-sheets-label">Sync Sheets</span>
         </button>
-        <a href="https://ccfph-my.sharepoint.com/:x:/g/personal/liveprod_volunteers_volunteers_ccf_org_ph/IQBLnzvWcBZDSrIyA78AqRRcAViqHEWtzbIuSjbbS6E43cc?e=qkIaop" target="_blank" id="open-sheets-link" class="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-sky-400 bg-neutral-900 border border-neutral-800 hover:border-sky-900 rounded-lg px-3 py-2.5 transition duration-150" title="Open External Excel Log">
-          <span class="material-icons-round text-sm">open_in_new</span>
-          <span class="hidden sm:inline">Open Sheets</span>
-        </a>
+        <button id="top-download-xlsx-btn" class="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-emerald-400 bg-neutral-900 border border-neutral-800 hover:border-emerald-900 rounded-lg px-3 py-2.5 transition duration-150" title="Download Excel (XLSX)">
+          <span class="material-icons-round text-sm">download</span>
+          <span class="hidden sm:inline">Export XLSX</span>
+        </button>
         <button id="activity-log-btn" class="relative flex items-center gap-1.5 text-xs text-neutral-400 hover:text-amber-400 bg-neutral-900 border border-neutral-800 hover:border-amber-900 rounded-lg px-3 py-2.5 transition duration-150" title="View Administrative Activity Log & Audit Trail">
           <span class="material-icons-round text-sm">manage_history</span>
           <span class="hidden sm:inline">Activity Log</span>

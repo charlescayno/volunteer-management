@@ -1880,6 +1880,8 @@ document.getElementById("cal-clear")?.addEventListener("click", () => {
 // =============================
 // Download XLSX
 // =============================
+document.getElementById("top-download-xlsx-btn")?.addEventListener("click", () => document.getElementById("download-xlsx-btn").click());
+
 document.getElementById("download-xlsx-btn").addEventListener("click", async () => {
   const btn = document.getElementById("download-xlsx-btn");
   btn.disabled = true;
