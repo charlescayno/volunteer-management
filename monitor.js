@@ -258,6 +258,7 @@ let activeSegFilter = "all";
 let activeCommsFilter = "all"; // "all" | "has" | "none"
 let activeIdFilter = "all"; // "all" | "has" | "none"
 let activeSearch = "";
+let compSearch = "";
 let activeSort = { key: "timein", dir: "desc" }; // key: "name"|"timein"|"duration"
 let compSort = { key: "timein", dir: "desc" }; // key: "name"|"segment"|"comms"|"timein"|"timeout"|"duration"
 let commsView = "grid"; // "grid" | "compact" | "list"
@@ -980,11 +981,20 @@ function renderTable() {
   // Completed table
   const completedBody = document.getElementById("completed-table-body");
   completedBody.innerHTML = "";
-  document.getElementById("completed-table-count").textContent = completedEntries.length ? `(${completedEntries.length})` : "";
-  document.getElementById("no-completed-message").classList.toggle("hidden", completedEntries.length > 0);
+  // Filter completed entries by search
+  let displayedCompletedEntries = completedEntries;
+  if (compSearch) {
+    const q = compSearch.toLowerCase();
+    displayedCompletedEntries = displayedCompletedEntries.filter(l =>
+      `${l.name} ${l.segment} ${l.role} ${l.commsId} ${l.numberedId}`.toLowerCase().includes(q)
+    );
+  }
+
+  document.getElementById("completed-table-count").textContent = displayedCompletedEntries.length ? `(${displayedCompletedEntries.length})` : "";
+  document.getElementById("no-completed-message").classList.toggle("hidden", displayedCompletedEntries.length === 0);
 
   // Sort completed entries
-  const sortedCompleted = completedEntries.slice().sort((a, b) => {
+  const sortedCompleted = displayedCompletedEntries.slice().sort((a, b) => {
     const d = compSort.dir === "asc" ? 1 : -1;
     switch (compSort.key) {
       case "name": return d * (a.name || "").localeCompare(b.name || "");
@@ -1289,11 +1299,11 @@ function renderCommsView(map) {
       </div>`;
     }
     const otherBatch = map[c.code];
-    return `<div class="relative rounded-lg border border-neutral-800 bg-neutral-900/50 p-2 flex flex-col items-center gap-1 min-w-0 opacity-60 hover:opacity-100 group transition">
+    return `<div class="relative rounded-lg border border-neutral-800 bg-neutral-900/50 p-2 flex flex-col items-center gap-1 min-w-0 hover:bg-neutral-800 group transition">
       <div class="absolute top-1 right-1">${condBadge}</div>
-      <span class="font-mono font-bold text-neutral-500 text-base leading-none">${c.code}</span>
-      <span class="text-[9px] text-neutral-600 text-center leading-tight truncate w-full">${c.assignment}</span>
-      <span class="text-[9px] text-neutral-600">${otherBatch ? "Other batch" : "Available"}</span>
+      <span class="font-mono font-bold text-neutral-400 text-base leading-none">${c.code}</span>
+      <span class="text-[9px] text-neutral-500 text-center leading-tight truncate w-full">${c.assignment}</span>
+      <span class="text-[9px] text-neutral-500">${otherBatch ? "Other batch" : "Available"}</span>
     </div>`;
   }
 
@@ -1329,9 +1339,9 @@ function renderCommsView(map) {
         <span class="text-[7px] text-amber-500 flex items-center gap-0.5 justify-center"><span class="material-icons-round" style="font-size:7px">hourglass_top</span>${displayName}</span>
       </div>`;
     }
-    return `<div class="rounded-md bg-neutral-900 border border-neutral-800 px-1.5 py-1.5 flex flex-col items-center gap-0.5 min-w-0 opacity-35">
-      <span class="font-mono font-bold text-neutral-600 text-xs leading-none">${c.code}</span>
-      <span class="text-[8px] text-neutral-700 text-center leading-tight">—</span>
+    return `<div class="rounded-md bg-neutral-900 border border-neutral-800 px-1.5 py-1.5 flex flex-col items-center gap-0.5 min-w-0 opacity-80 hover:bg-neutral-800 transition">
+      <span class="font-mono font-bold text-neutral-400 text-xs leading-none">${c.code}</span>
+      <span class="text-[8px] text-neutral-500 text-center leading-tight">—</span>
     </div>`;
   }
 
@@ -1374,12 +1384,12 @@ function renderCommsView(map) {
         <td class="px-4 py-2"></td>
       </tr>`;
     }
-    return `<tr class="border-b border-neutral-800/30 opacity-35">
-      <td class="px-4 py-2"><span class="inline-block w-2 h-2 rounded-full bg-neutral-700"></span></td>
-      <td class="px-4 py-2"><span class="font-mono font-bold text-neutral-600 text-xs">${c.code}</span></td>
-      <td class="px-4 py-2 text-neutral-600 text-xs">${c.assignment}</td>
-      <td class="px-4 py-2 text-neutral-700 text-xs">Available</td>
-      <td class="px-4 py-2 text-neutral-700 text-xs">—</td>
+    return `<tr class="border-b border-neutral-800/30 opacity-80 hover:bg-neutral-800/50 transition">
+      <td class="px-4 py-2"><span class="inline-block w-2 h-2 rounded-full bg-neutral-600"></span></td>
+      <td class="px-4 py-2"><span class="font-mono font-bold text-neutral-400 text-xs">${c.code}</span></td>
+      <td class="px-4 py-2 text-neutral-500 text-xs">${c.assignment}</td>
+      <td class="px-4 py-2 text-xs text-neutral-500">Available</td>
+      <td class="px-4 py-2 text-neutral-500 text-xs">—</td>
       <td class="px-4 py-2"></td>
     </tr>`;
   }
@@ -2086,8 +2096,11 @@ document.getElementById("sort-reset")?.addEventListener("click", () => {
   activeCommsFilter = "all";
   activeIdFilter = "all";
   activeSearch = "";
+  compSearch = "";
   const searchEl = document.getElementById("active-search");
   if (searchEl) searchEl.value = "";
+  const compSearchEl = document.getElementById("comp-search");
+  if (compSearchEl) compSearchEl.value = "";
   renderTable();
 });
 
@@ -2115,6 +2128,12 @@ document.getElementById("active-th-duration")?.addEventListener("click", () => t
 // Active section search
 document.getElementById("active-search")?.addEventListener("input", (e) => {
   activeSearch = e.target.value;
+  renderTable();
+});
+
+// Completed section search
+document.getElementById("comp-search")?.addEventListener("input", (e) => {
+  compSearch = e.target.value;
   renderTable();
 });
 
