@@ -2256,22 +2256,64 @@ if (document.getElementById("search-user-input")) {
     }
 
     matches.forEach((v) => {
+      const rowContainer = document.createElement("div");
+      rowContainer.className = "w-full border border-neutral-200 rounded-lg overflow-hidden";
+
       const row = document.createElement("button");
       row.type = "button";
-      row.className = "w-full text-left px-3 py-3 rounded-lg border border-neutral-200 hover:bg-neutral-50 hover:border-neutral-400 transition duration-150 flex items-center justify-between";
+      row.className = "w-full text-left px-3 py-3 bg-white hover:bg-neutral-50 transition duration-150 flex items-center justify-between";
       row.innerHTML = `
         <div>
           <span class="font-semibold text-neutral-800">${v.name}</span>
           ${v.team ? `<span class="text-xs text-neutral-400 ml-2">${v.team}</span>` : ""}
         </div>
-        <span class="material-icons-round text-neutral-400 text-base">arrow_forward</span>
+        <span class="material-icons-round text-neutral-400 text-base">qr_code_2</span>
       `;
+
+      const qrPanel = document.createElement("div");
+      qrPanel.className = "hidden bg-neutral-50 p-4 flex flex-col items-center justify-center border-t border-neutral-100";
+
       row.addEventListener("click", () => {
-        // Simulate scanning this volunteer's QR
-        showLoading("Looking up volunteer...");
-        handleVolunteerScan(v.id);
+        const isHidden = qrPanel.classList.contains("hidden");
+        
+        // Hide all other expanded panels in the results list
+        resultsEl.querySelectorAll('.qr-panel').forEach(p => {
+          if (p !== qrPanel) {
+            p.classList.add("hidden");
+            p.innerHTML = "";
+          }
+        });
+
+        if (isHidden) {
+          qrPanel.innerHTML = `
+            <p class="text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-3">Your QR Code</p>
+            <div class="qr-target inline-block p-3 bg-white border border-neutral-200 rounded-lg mb-3"></div>
+            <p class="text-xs text-neutral-400 mb-4 text-center">Screenshot this to save your QR code for next time.</p>
+            <button type="button" class="w-full py-2 bg-neutral-900 text-white font-bold rounded-lg shadow-md hover:bg-neutral-700 transition duration-150 proceed-btn">Proceed to Check In</button>
+          `;
+          new QRCode(qrPanel.querySelector(".qr-target"), {
+            text: v.id,
+            width: 160,
+            height: 160,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+          });
+          qrPanel.querySelector(".proceed-btn").addEventListener("click", () => {
+            showLoading("Looking up volunteer...");
+            handleVolunteerScan(v.id);
+          });
+          qrPanel.classList.remove("hidden");
+          qrPanel.classList.add("qr-panel"); // mark for easy finding
+        } else {
+          qrPanel.classList.add("hidden");
+          qrPanel.innerHTML = "";
+        }
       });
-      resultsEl.appendChild(row);
+      
+      rowContainer.appendChild(row);
+      rowContainer.appendChild(qrPanel);
+      resultsEl.appendChild(rowContainer);
     });
   });
 }
