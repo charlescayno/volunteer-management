@@ -3040,6 +3040,8 @@ document.getElementById("sync-sheets-btn").addEventListener("click", async () =>
     const allDates = logsSnap.val() || {};
     const allLogEntries = [];
 
+    const fmtTime = (ts) => ts ? new Date(ts).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", hour12: true }) : "";
+
     Object.entries(allDates).forEach(([date, dateLogs]) => {
       Object.entries(dateLogs).forEach(([key, log]) => {
         // Skip pending entries that haven't been confirmed
@@ -3053,8 +3055,8 @@ document.getElementById("sync-sheets-btn").addEventListener("click", async () =>
           role: log.role || "",
           commsId: log.commsId || "",
           numberedId: log.numberedId || "",
-          timeIn: log.timeIn || "",
-          timeOut: log.timeOut || "",
+          timeIn: fmtTime(log.timeIn),
+          timeOut: fmtTime(log.timeOut),
         });
       });
     });
