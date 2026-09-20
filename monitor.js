@@ -234,7 +234,7 @@ setInterval(updateClock, 1000);
 // =============================
 // Google Sheets Sync
 // =============================
-const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycby1MQ0l0uJfynqWveFAZDa1Q3HQPbfmLxGX4ux5bvdCHmOtS6JmD-_lvIDvLPjU8-0/exec';
+const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbxYSoqSYa-ZyWx4umbEkFbdsd6EN9Qj6mI7NaYFoQtZLwuqjLPcrvD--jaX9mJstKTY/exec';
 
 function syncToSheets(payload) {
   fetch(SHEETS_API_URL, {
