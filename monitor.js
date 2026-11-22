@@ -1264,46 +1264,46 @@ function renderCommsView(map) {
         const displayName = volunteerNicknameMap[active.volunteerId] || (active.name || "").split(" ")[0];
         const pPos = active._queuePos || 2;
         const pTotal = active._queueTotal || 2;
-        return `<div class="relative rounded-lg border border-amber-500/40 bg-amber-500/5 p-2 flex flex-col items-center gap-1 min-w-0 group">
-          <div class="absolute top-1 right-1">${condBadge}</div>
-          <span class="font-mono font-black text-amber-400 text-base leading-none">${c.code}</span>
-          <span class="text-[9px] text-neutral-500 text-center leading-tight truncate w-full">${c.assignment}</span>
-          <span class="text-[10px] font-semibold text-amber-300 text-center leading-tight truncate w-full">${displayName}</span>
-          <span class="text-[8px] font-bold text-amber-500 font-mono bg-amber-500/10 px-1.5 py-0.5 rounded-full">#${pPos} of ${pTotal}</span>
+        return `<div class="relative rounded-lg border border-amber-500/40 bg-amber-500/5 py-2 px-1 sm:p-2 flex flex-col items-center gap-1 min-w-0 group">
+          <div class="w-full flex justify-end sm:block sm:w-auto sm:absolute sm:top-1 sm:right-1">${condBadge}</div>
+          <span class="font-mono font-black text-amber-400 text-lg sm:text-base leading-none sm:leading-none">${c.code}</span>
+          <span class="text-[11px] sm:text-[9px] text-neutral-500 text-center leading-tight break-words sm:truncate w-full">${c.assignment.replace("/", "/<wbr>")}</span>
+          <span class="text-[11px] sm:text-[10px] font-semibold text-amber-300 text-center leading-tight break-words sm:truncate w-full">${displayName}</span>
+          <span class="text-[10px] sm:text-[8px] whitespace-nowrap font-bold text-amber-500 font-mono bg-amber-500/10 px-1.5 py-0.5 rounded-full">#${pPos} of ${pTotal}</span>
         </div>`;
       }
       const since = active.timeIn ? calcDuration({ timeIn: active.timeIn }) : "—";
       const displayName = volunteerNicknameMap[active.volunteerId] || (active.name || "").split(" ")[0];
       const queuedName = queued ? (volunteerNicknameMap[queued.volunteerId] || (queued.name || "").split(" ")[0]) : null;
       const qTotal = active._queueTotal || 1;
-      const posBadge = qTotal > 1 ? `<span class="text-[8px] font-bold text-green-500 font-mono bg-green-500/10 px-1.5 py-0.5 rounded-full">#1 of ${qTotal}</span>` : "";
-      return `<div class="relative rounded-lg border border-green-500/40 bg-green-500/5 p-2 flex flex-col items-center gap-1 min-w-0 group">
-        <div class="absolute top-1 right-1">${condBadge}</div>
-        <span class="font-mono font-black text-green-400 text-base leading-none">${c.code}</span>
-        <span class="text-[9px] text-neutral-500 text-center leading-tight truncate w-full">${c.assignment}</span>
-        <span class="text-[10px] font-semibold text-white text-center leading-tight truncate w-full">${displayName}</span>
-        <span class="text-[9px] text-green-600 font-mono">${since}</span>
+      const posBadge = qTotal > 1 ? `<span class="text-[10px] sm:text-[8px] whitespace-nowrap font-bold text-green-500 font-mono bg-green-500/10 px-1.5 py-0.5 rounded-full">#1 of ${qTotal}</span>` : "";
+      return `<div class="relative rounded-lg border border-green-500/40 bg-green-500/5 py-2 px-1 sm:p-2 flex flex-col items-center gap-1 min-w-0 group">
+        <div class="w-full flex justify-end sm:block sm:w-auto sm:absolute sm:top-1 sm:right-1">${condBadge}</div>
+        <span class="font-mono font-black text-green-400 text-lg sm:text-base leading-none sm:leading-none">${c.code}</span>
+        <span class="text-[11px] sm:text-[9px] text-neutral-500 text-center leading-tight break-words sm:truncate w-full">${c.assignment.replace("/", "/<wbr>")}</span>
+        <span class="text-[11px] sm:text-[10px] font-semibold text-white text-center leading-tight break-words sm:truncate w-full">${displayName}</span>
+        <span class="text-[11px] sm:text-[9px] text-green-600 font-mono">${since}</span>
         ${posBadge}
-        ${queuedName ? `<span class="text-[8px] text-amber-400 font-semibold flex items-center gap-0.5"><span class="material-icons-round" style="font-size:8px">hourglass_top</span>${queuedName}</span>` : ""}
+        ${queuedName ? `<span class="text-[10px] sm:text-[8px] text-amber-400 font-semibold flex items-center gap-0.5"><span class="material-icons-round" style="font-size:8px">hourglass_top</span>${queuedName}</span>` : ""}
       </div>`;
     }
     if (queued) {
       const displayName = volunteerNicknameMap[queued.volunteerId] || (queued.name || "").split(" ")[0];
-      return `<div class="relative rounded-lg border border-amber-500/40 bg-amber-500/5 p-2 flex flex-col items-center gap-1 min-w-0 group">
-        <div class="absolute top-1 right-1">${condBadge}</div>
-        <span class="font-mono font-black text-amber-400 text-base leading-none">${c.code}</span>
-        <span class="text-[9px] text-neutral-500 text-center leading-tight truncate w-full">${c.assignment}</span>
+      return `<div class="relative rounded-lg border border-amber-500/40 bg-amber-500/5 py-2 px-1 sm:p-2 flex flex-col items-center gap-1 min-w-0 group">
+        <div class="w-full flex justify-end sm:block sm:w-auto sm:absolute sm:top-1 sm:right-1">${condBadge}</div>
+        <span class="font-mono font-black text-amber-400 text-lg sm:text-base leading-none sm:leading-none">${c.code}</span>
+        <span class="text-[11px] sm:text-[9px] text-neutral-500 text-center leading-tight break-words sm:truncate w-full">${c.assignment.replace("/", "/<wbr>")}</span>
         <span class="material-icons-round text-amber-500" style="font-size:11px">hourglass_top</span>
-        <span class="text-[10px] font-semibold text-amber-300 text-center leading-tight truncate w-full">${displayName}</span>
-        <span class="text-[9px] text-amber-700 font-mono">queued</span>
+        <span class="text-[11px] sm:text-[10px] font-semibold text-amber-300 text-center leading-tight break-words sm:truncate w-full">${displayName}</span>
+        <span class="text-[11px] sm:text-[9px] text-amber-700 font-mono">queued</span>
       </div>`;
     }
     const otherBatch = map[c.code];
-    return `<div class="relative rounded-lg border border-neutral-800 bg-neutral-900/50 p-2 flex flex-col items-center gap-1 min-w-0 hover:bg-neutral-800 group transition">
-      <div class="absolute top-1 right-1">${condBadge}</div>
-      <span class="font-mono font-bold text-neutral-400 text-base leading-none">${c.code}</span>
-      <span class="text-[9px] text-neutral-500 text-center leading-tight truncate w-full">${c.assignment}</span>
-      <span class="text-[9px] text-neutral-500">${otherBatch ? "Other batch" : "Available"}</span>
+    return `<div class="relative rounded-lg border border-neutral-800 bg-neutral-900/50 py-2 px-1 sm:p-2 flex flex-col items-center gap-1 min-w-0 hover:bg-neutral-800 group transition">
+      <div class="w-full flex justify-end sm:block sm:w-auto sm:absolute sm:top-1 sm:right-1">${condBadge}</div>
+      <span class="font-mono font-bold text-neutral-400 text-lg sm:text-base leading-none sm:leading-none">${c.code}</span>
+      <span class="text-[11px] sm:text-[9px] text-neutral-500 text-center leading-tight break-words sm:truncate w-full">${c.assignment.replace("/", "/<wbr>")}</span>
+      <span class="text-[11px] sm:text-[9px] text-neutral-500">${otherBatch ? "Other batch" : "Available"}</span>
     </div>`;
   }
 
@@ -1418,10 +1418,10 @@ function renderCommsView(map) {
   if (commsView === "grid") {
     content.innerHTML =
       batchHeader("AM Batch · 9AM & 12NN", Object.keys(amMap).length, "text-sky-400", "am", amOpts) +
-      `<div class="px-4 pb-3 grid grid-cols-8 gap-2">${allComms.map(c => gridCell(c, amMap, amQueueMap)).join("")}</div>` +
+      `<div class="px-3 sm:px-4 pb-3 grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">${allComms.map(c => gridCell(c, amMap, amQueueMap)).join("")}</div>` +
       divider +
       batchHeader("PM Batch · 3PM & 6PM", Object.keys(pmMap).length, "text-violet-400", "pm", pmOpts) +
-      `<div class="px-4 pb-3 grid grid-cols-8 gap-2">${allComms.map(c => gridCell(c, pmMap, pmQueueMap)).join("")}</div>`;
+      `<div class="px-3 sm:px-4 pb-3 grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">${allComms.map(c => gridCell(c, pmMap, pmQueueMap)).join("")}</div>`;
     wireFilterBtns();
 
   } else if (commsView === "compact") {
